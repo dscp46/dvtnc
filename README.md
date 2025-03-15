@@ -3,7 +3,7 @@
 > [!CAUTION]
 > For now, this repo is a scratchpad to collect ideas.
 
-That project aims to build a KISS software TNC to interface AX.25 packet applications with D-Star DV slow and fast data.
+That project aims to build a KISS software TNC to bridge AX.25 packet applications though D-Star DV slow and fast data.
 
 ## Radio support
 What we need:
