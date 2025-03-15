@@ -1,4 +1,4 @@
-# D-Star TNC
+# D-Star DV TNC
 
 > [!CAUTION]
 > For now, this repo is a scratchpad to collect ideas.
@@ -9,10 +9,11 @@ That project aims to build a KISS software TNC to interface AX.25 packet applica
 What we need:
   * On launch, collect existing settings and save them [P1]
   * Auto-detect radio type, then set our own settings auto-magically. [P1]
-  * Auto QSY to the appropriate channel [P2]
+  * Auto QSY to the appropriate channel [P3]
   * On termination, restore prior settings [P1]
-  * DV fast data auto upgrade [P3]
-  * CI-V commands bridging through SetHardware commands [P4]
+  * DV fast data auto upgrade [P4]
+  * CI-V commands bridging through SetHardware commands [P5]
+  * Buffer management, proper channel flow control [P2]
 
 On the Icom side, I've noted 2 interface models to access the data channel:
   * CI-V Transceive commands (ID-51s work like this)
