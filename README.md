@@ -9,13 +9,14 @@ On the great scheme of things, the idea is to communicate with a [digital Servic
 ## Radio support
 What we need:
   * On launch, collect existing settings and save them [P1]
-  * Auto-detect radio type, then set our own settings auto-magically. [P1]
-  * Auto QSY to the appropriate channel [P3]
   * On termination, restore prior settings [P1]
+  * Auto-detect radio type, then set our own settings auto-magically. [P1]
+  * Buffer management, proper channel flow control [P2]
+  * Auto QSY to the appropriate channel [P3]
   * DV fast data auto upgrade [P4]
   * CI-V commands bridging through SetHardware commands [P5]
-  * Buffer management, proper channel flow control [P2]
-  * AX.25 Header compression (Similar to RFC2508) [P6]
+  * AGWPE compatibility [P6]
+  * AX.25 Header compression (Similar to RFC2508) [P7]
 
 On the Icom side, I've noted 2 interface models to access the data channel:
   * CI-V Transceive commands (ID-51s work like this)
