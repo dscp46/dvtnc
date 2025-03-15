@@ -4,6 +4,7 @@
 > For now, this repo is a scratchpad to collect ideas.
 
 That project aims to build a KISS software TNC to bridge AX.25 packet applications though D-Star DV slow and fast data.
+On the great scheme of things, the idea is to communicate with a [digital Service Gateway](https://github.com/dscp46/dsgw/).
 
 ## Radio support
 What we need:
