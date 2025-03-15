@@ -15,6 +15,7 @@ What we need:
   * DV fast data auto upgrade [P4]
   * CI-V commands bridging through SetHardware commands [P5]
   * Buffer management, proper channel flow control [P2]
+  * AX.25 Header compression (Similar to RFC2508) [P6]
 
 On the Icom side, I've noted 2 interface models to access the data channel:
   * CI-V Transceive commands (ID-51s work like this)
