@@ -17,10 +17,17 @@ ringbuffer_t* ringbuffer_alloc( size_t size)
 	buf->buffer = (unsigned char*) malloc( size);
 	if ( buf->buffer == NULL )
 	{
-		free( buf);
+		ringbuffer_free( buf);
 		return NULL;
 	}
 
+	pthread_mutex_init( buf->mutex, NULL);
+	if ( buf->mutex == NULL )
+	{
+		ringbuffer_free( buf);
+		return NULL;
+	}
+	
 	buf->size = size;
 	buf->cur_read = buf->buffer;
 	buf->cur_write = buf->buffer;
@@ -40,14 +47,20 @@ void ringbuffer_free( ringbuffer_t *rbuf)
 
 	if ( rbuf->buffer != NULL )
 		free( rbuf->buffer);
-	
+
 	rbuf->buffer = NULL;
+	
+	if ( buf->mutex != NULL )
+		pthread_mutex_destroy( buf->mutex);
+	
+	buf->mutex = NULL;
+
 	free( rbuf);
 }
 
 /** 
  * @brief Get how many bytes can be written at the moment
- *
+ *   buf->mutex needs to be locked before calling this function.
  * @param[in] buf	The ringbuffer we want to check (ringbuffer_t*) 
  * @return 	Number of available bytes to be written, at a given time.(size_t)
  */
@@ -73,6 +86,8 @@ size_t ringbuffer_pull( void *dest, size_t n, ringbuffer_t *buf)
 	if ( buf == NULL || dest == NULL )
 		return 0;
 
+	pthread_mutex_lock( buf->mutex);
+
 	size_t used_bytes = (buf->cur_write - buf->cur_read + buf->size) % buf->size;
 	size_t n_read = ( n <= used_bytes ) ? n : used_bytes;
 	
@@ -86,6 +101,8 @@ size_t ringbuffer_pull( void *dest, size_t n, ringbuffer_t *buf)
 		if ( buf->cur_read == buf->buffer + buf->size )
 			buf->cur_read = buf->buffer;
 	}
+	
+	pthread_mutex_unlock( buf->mutex);
 	
 	return n_read;
 }
@@ -103,6 +120,8 @@ size_t ringbuffer_push( const void *src, size_t n, ringbuffer_t *buf)
 	if ( buf == NULL || src == NULL)
 		return 0;
 	
+	pthread_mutex_lock( buf->mutex);
+	
 	size_t avail_bytes = ringbuffer_bytes_available( buf);
 	
 	size_t n_written = ( n <= avail_bytes ) ? n : avail_bytes;
@@ -116,6 +135,8 @@ size_t ringbuffer_push( const void *src, size_t n, ringbuffer_t *buf)
 		if ( buf->cur_write == buf->buffer + buf->size )
 			buf->cur_write = buf->buffer;
 	}
+
+	pthread_mutex_unlock( buf->mutex);
 	
 	return n_written;
 }

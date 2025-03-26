@@ -8,6 +8,7 @@ typedef struct ringbuffer_t {
 	size_t size;
 	unsigned char *cur_read;
 	unsigned char *cur_write;
+	pthread_mutex_t *mutex;
 } ringbuffer_t;
 
 ringbuffer_t* ringbuffer_alloc( size_t size);
