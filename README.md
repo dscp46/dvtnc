@@ -31,7 +31,7 @@ yEncoding parameters:
   * Start Marker: `` TODO: find a statistically unlikely character
   * End Marker: `` TODO: find a statistically unlikely character
   * Escape character: `=` (`0x3D`)
-  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0xFD`, `0xFE`, `0xFF`
+  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF`
   * Offset: 64
 
 ## Control channel
