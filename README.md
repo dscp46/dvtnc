@@ -25,13 +25,13 @@ On the Icom side, I've noted 2 interface models to access the data channel:
 TODO: dig in Kenwood specs
 
 ## Data encapsulation format:
-Yencode the KISS frames prior to transmitting them as is.
+Strip the frame marker character, then Yencode the KISS frames prior to transmitting them as is.
 
 yEncoding parameters:
-  * Start Marker: `` TODO: find a statistically unlikely character
-  * End Marker: `` TODO: find a statistically unlikely character
+  * Start Marker: `0xE1`
+  * End Marker: `0xE0`
   * Escape character: `=` (`0x3D`)
-  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF`
+  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus special characters)
   * Offset: 64
 
 ## Control channel
