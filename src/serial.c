@@ -1,26 +1,24 @@
+#include "serial.h"
+#include "ringbuffer.h"
+
+#include <pthread.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "serial.h"
 
 // Structure that holds the serial port properties
 typedef struct serial_s {
 	bool  used;
-	FILE* socket;
-	char rx_buffer[SERIAL_TX_BUFSIZE];
-	char tx_buffer[SERIAL_RX_BUFSIZE];
+	FILE* port;
+	ringbuffer_t *rx_buffer;
+	ringbuffer_t *tx_buffer;
 	
-	char *cur_tx_read;
-	char *cur_tx_write;
+	bool xoff;
+	pthread_mutex_t xoff_mutex;
+	pthread_cond_t  xoff_condition;
 	
-	char *cur_rx_read;
-	
-	bool xoff                      = false
-	pthread_mutex_t xoff_mutex     = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t  xoff_condition = PTHREAD_COND_INITIALIZER;
-	
-	pthread_mutex_t txbuff_mutex   = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t  txbuff_cond    = PTHREAD_COND_INITIALIZER;
+	pthread_mutex_t txbuff_mutex;
+	pthread_cond_t  txbuff_cond;
 	
 	pthread_t tx_thread;
 	pthread_t rx_thread;
@@ -29,13 +27,16 @@ typedef struct serial_s {
 } serial_s;
 
 // Max number of serial ports
-const size_t SERIAL_PORT_MAX = 8;
+#define SERIAL_PORT_MAX 8
 
 // Opaque structure which holds the serial port properties
 serial_s __port_list[SERIAL_PORT_MAX];
 
 // The invalid opaque pointer, useful to report failed allocation
 const serial_t __INVALID_SERIAL_PORT = -1;
+
+#define XON	0x11
+#define	XOFF	0x13
 
 // Allocate a serial port and return an opaque pointer. Return a negative value if allocation failed.
 serial_t allocate_serial()
@@ -44,7 +45,11 @@ serial_t allocate_serial()
 	{
 		if ( __port_list[i].used == false )
 		{
-			__port_list[i].used == true;
+			__port_list[i].used = true;
+			// FIXME Initialize conds and mutexes
+			// FIXME Initialize ringbuffers
+			__port_list[i].tx_buffer = ringbuffer_alloc( SERIAL_TX_BUFSIZE);
+			__port_list[i].rx_buffer = ringbuffer_alloc( SERIAL_RX_BUFSIZE);
 			return i;
 		}
 	}
@@ -59,15 +64,17 @@ void free_serial( serial_t port)
 	if ( port < 0 || port >= SERIAL_PORT_MAX )
 		return;
 
+	ringbuffer_free( __port_list[port].rx_buffer );
+	ringbuffer_free( __port_list[port].tx_buffer );
 	// Mark the port as unused
-	__port_count[port].used = false;		
+	__port_list[port].used = false;		
 }
 
 /***** Threads *****/
 void *serial_writer(void *arg)
 { 
 	serial_s *serial = (serial_s*) arg;
-	char buf[1];
+	unsigned char buf;
 	
 	while (1) {
 		// Block thread if XOFF is asserted
@@ -78,14 +85,16 @@ void *serial_writer(void *arg)
 		pthread_mutex_unlock( &serial->xoff_mutex);
 		
 		// Sleeplock as long as the ring buffer is empty
-		pthread_mutex_lock( &serial->txbuff_mutex)
-		while ( serial->cur_tx_read == cur_tx_write) {
-			pthread_cond_wait( &serial->txbuff_condition, &serial->txbuff_mutex);
+		pthread_mutex_lock( &serial->txbuff_mutex);
+		while ( ringbuffer_bytes_available( serial->tx_buffer) == 0 ) {
+			pthread_cond_wait( &serial->txbuff_cond, &serial->txbuff_mutex);
 		}
-		pthread_mutex_unlock( &serial->txbuff_mutex)
+		pthread_mutex_unlock( &serial->txbuff_mutex);
 		
 		// Write one byte from ring buffer
-		serial->cur_tx_read = ring_memcpy( &buf, serial->cur_tx_read, 1, serial->tx_buffer, SERIAL_TX_BUFSIZE);
+		buf = ringbuffer_pull( &buf, 1, serial->tx_buffer);
+	
+		fwrite( &buf, 1, 1, serial->port);
 	}
 	return NULL;
 }
@@ -94,13 +103,13 @@ void *serial_reader( void *arg)
 {
 	// TODO: read a few bytes at once, define buffer size
 	serial_s *serial = (serial_s*) arg;
-	char buf[1];
+	unsigned char buf;
 	
 	while (1) {
 		// Read 1 byte from serial port
-		read( serial->socket, &buf, 1);
+		fread( &buf, 1, 1, serial->port);
 		
-		switch ( c )
+		switch ( buf )
 		{
 		case XOFF:
 			pthread_mutex_lock( &serial->xoff_mutex);
@@ -116,28 +125,29 @@ void *serial_reader( void *arg)
 			
 		default:
 			// TODO: Add char to read buffer
+			ringbuffer_push( &buf, 1, serial->rx_buffer);
 		}
 	}
 	return NULL;
 }
 
 // Open serial port, returns an opaque designator.
-serial_t open( void)
+serial_t serial_open( void)
 {
-	return __INVALID_SERIAL;
+	return __INVALID_SERIAL_PORT;
 }
 
 // Close port
-void close( serial_t port);
+void serial_close( serial_t port);
 
 
 // Send data
-int16_t send( serial_t port, void *buf, size_t len)
+int16_t serial_send( serial_t port, void *buf, size_t len)
 {
 }
 
 // Receive data
-int16_t recv( serial_t port, void **buf, size_t buf_size)
+int16_t serial_recv( serial_t port, void **buf, size_t buf_size)
 {
 
 }

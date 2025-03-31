@@ -1,6 +1,7 @@
 #ifndef __RINGBUFFER_H
 #define __RINGBUFFER_H
 
+#include <pthread.h>
 #include <stdint.h>
 
 typedef struct ringbuffer_t {

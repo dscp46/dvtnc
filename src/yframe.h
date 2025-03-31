@@ -1,7 +1,9 @@
 #ifndef __YFRAME_H
 #define __YFRAME_H
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 typedef enum {
 	UNSYNCED,
@@ -20,8 +22,8 @@ typedef struct yframe_ctx_t {
 	// A buffer that will be used to assemble the frame
 	char *frame_buffer;
 	
-	// The current status
-	yframe_state_t status;
+	// The current receiver state  
+	yframe_state_t state;
 	
 	// Where we currently are in the buffer
 	size_t cur_buf_size;

@@ -1,5 +1,7 @@
 #include "ringbuffer.h"
 
+#include <stdlib.h>
+
 /** 
  * @brief Create a ring buffer
  * 
@@ -50,10 +52,10 @@ void ringbuffer_free( ringbuffer_t *rbuf)
 
 	rbuf->buffer = NULL;
 	
-	if ( buf->mutex != NULL )
-		pthread_mutex_destroy( buf->mutex);
+	if ( rbuf->mutex != NULL )
+		pthread_mutex_destroy( rbuf->mutex);
 	
-	buf->mutex = NULL;
+	rbuf->mutex = NULL;
 
 	free( rbuf);
 }

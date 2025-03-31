@@ -1,13 +1,16 @@
-#include <string.h>
-
 #include "yframe.h"
 
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define YFRAME_START	0xE1
-#define YFRAME_END		0xE0
-#define YFRAME_ESC		0x3D
+#define YFRAME_END	0xE0
+#define YFRAME_ESC	0x3D
 #define YFRAME_OFFSET	64
 
-const unsigned char YFRAME_BANNED_CHARS = {
+const unsigned char YFRAME_BANNED_CHARS[] = {
 	0x00, 0x11, 0x13, 0x1A, YFRAME_ESC, 0x84, YFRAME_END, YFRAME_START, 0xFD, 0xFE, 0xFF
 };
 
@@ -50,7 +53,7 @@ yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame)
 	}
 	
 	ctx->cur_buf_size = 0;
-	ctx->status = UNSYNCED;
+	ctx->state = UNSYNCED;
 	
 	ctx->process_frame = ( process_frame != NULL ) ? process_frame : yframe_print;
 	
@@ -79,7 +82,7 @@ bool yframe_is_banned_char( unsigned char c)
 		if ( c == YFRAME_BANNED_CHARS[n] )
 			return true;
 	}
-	while ( n-- > 0 )
+	while ( n-- > 0 );
 	
 	return false;
 }
@@ -117,16 +120,16 @@ void yframe_encode( void* buf, size_t n, void **out, size_t *out_size)
 	
 	unsigned char *in = (unsigned char *) buf;
 	unsigned char *res = (unsigned char *) *out;
-	int16_t	c;
+	//int16_t	c;
 	
 	*res++ = YFRAME_START;
 	
 	while ( n-- > 0 )
 	{
-		if( yframe_is_banned_char( *buff++) )
+		if( yframe_is_banned_char( *in) )
 		{
 			*res++ = YFRAME_ESC;
-			*res++ = YFRAME_OFFSET + *in++
+			*res++ = YFRAME_OFFSET + *in++;
 		}
 		else
 			*res++ = *in++;
@@ -157,13 +160,13 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 		case READING:
 			if ( c == YFRAME_END )
 			{
-				// TODO: if ( is_valid_checksum( ctx->buffer, ctx->cur_buf_size) )
+				// TODO: if ( is_valid_checksum( ctx->frame_buffer, ctx->cur_buf_size) )
 				if ( true )
 				{
 					yframe_cb_args_t args;
-					args->buf = ctx->buffer;
-					args->n = ctx->cur_buf_size;
-					(*process_frame)( &args);
+					args.buf = ctx->frame_buffer;
+					args.n = ctx->cur_buf_size;
+					(*ctx->process_frame)( &args);
 				}
 				
 				ctx->state = UNSYNCED;
@@ -176,14 +179,14 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 				break;
 			}
 			
-			ctx->buffer[ctx->cur_buf_size++] = c;
+			ctx->frame_buffer[ctx->cur_buf_size++] = c;
 			if ( ctx->cur_buf_size >= ctx->mtu )
 				ctx->state = UNSYNCED;
 
 			break;
 			
-		case YFRAME_ESC:
-			ctx->buffer[ctx->cur_buf_size++] = c - YFRAME_OFFSET;
+		case UNESC_NEXT:
+			ctx->frame_buffer[ctx->cur_buf_size++] = c - YFRAME_OFFSET;
 			if ( ctx->cur_buf_size >= ctx->mtu )
 				ctx->state = UNSYNCED;
 			
