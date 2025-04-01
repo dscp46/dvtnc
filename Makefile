@@ -11,6 +11,9 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 dvtnc: $(objects)
 	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
 
+test_yframe: $(addprefix $(BUILDDIR)/, test_yframe.o yframe.o)
+	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
+
 all: dvtnc
 
 .PHONY: clean
@@ -18,9 +21,10 @@ all: dvtnc
 clean: 
 	rm -f $(BUILDDIR)/*.o
 	rm -f dvtnc 
+	rm -f test_yframe
 
-tests: dvtnc
-	./dvtnc --run-tests
+tests: test_yframe
+	./test_yframe
 
 symbols:
 	objdump -tC $(BUILDDIR)/*.o

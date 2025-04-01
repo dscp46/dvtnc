@@ -83,7 +83,10 @@ void yframe_ctx_free( yframe_ctx_t* ctx)
 bool yframe_is_banned_char( unsigned char c)
 {
 	if ( !charmap_inited )
+	{
 		__yframe_init_banned_charmap();
+		charmap_inited = true;
+	}
 	
 	return ( BANNED_CHARMAP[ c/8 ] & (1 << ( c%8 )) ) != 0;
 }
@@ -106,9 +109,11 @@ size_t yframe_encoded_size( const void* buf, size_t n)
 	return outsize;
 }
 
-void yframe_encode( void* buf, size_t n, void **out, size_t *out_size)
+// Allocate a buffer and encode the frame.
+// The end user is responsible for freeing the out buffer. 
+void yframe_encode( const void* src, size_t n, void **out, size_t *out_size)
 {
-	*out_size = yframe_encoded_size( buf, n);
+	*out_size = yframe_encoded_size( src, n);
 	if ( *out_size == 0 )
 		return;
 	
@@ -119,7 +124,7 @@ void yframe_encode( void* buf, size_t n, void **out, size_t *out_size)
 		return;
 	}
 	
-	unsigned char *in = (unsigned char *) buf;
+	const unsigned char *in = (const unsigned char *) src;
 	unsigned char *res = (unsigned char *) *out;
 	//int16_t	c;
 	
@@ -157,7 +162,7 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 			if ( c == YFRAME_START )
 				ctx->state = READING;
 			break;
-			
+
 		case READING:
 			if ( c == YFRAME_END )
 			{
@@ -171,31 +176,38 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 				}
 				
 				ctx->state = UNSYNCED;
+				ctx->cur_buf_size = 0;
 				break;
 			}
-						
+
 			if ( c == YFRAME_ESC )
 			{
 				ctx->state = UNESC_NEXT;
 				break;
 			}
-			
-			ctx->frame_buffer[ctx->cur_buf_size++] = c;
-			if ( ctx->cur_buf_size >= ctx->mtu )
-				ctx->state = UNSYNCED;
 
+			if ( ctx->cur_buf_size >= ctx->mtu )
+			{
+				ctx->state = UNSYNCED;
+				ctx->cur_buf_size = 0;
+			}
+
+			ctx->frame_buffer[ctx->cur_buf_size++] = c;
 			break;
 			
 		case UNESC_NEXT:
 			ctx->frame_buffer[ctx->cur_buf_size++] = c - YFRAME_OFFSET;
 			if ( ctx->cur_buf_size >= ctx->mtu )
+			{
 				ctx->state = UNSYNCED;
-			
+				ctx->cur_buf_size = 0;
+			}
 			ctx->state = READING;
 			break;
 		
 		default:
 			ctx->state = UNSYNCED;
+			ctx->cur_buf_size = 0;
 		}
 	}
 }

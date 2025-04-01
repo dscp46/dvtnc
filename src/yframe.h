@@ -43,7 +43,7 @@ bool yframe_is_banned_char( unsigned char c);
 
 size_t yframe_encoded_size( const void* buf, size_t n);
 
-void yframe_encode( void* buf, size_t n, void **out, size_t *out_size);
+void yframe_encode( const void* buf, size_t n, void **out, size_t *out_size);
 
 void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n);
 
