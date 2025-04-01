@@ -10,11 +10,18 @@
 #define YFRAME_ESC	0x3D
 #define YFRAME_OFFSET	64
 
-const unsigned char YFRAME_BANNED_CHARS[] = {
-	0x00, 0x11, 0x13, 0x1A, YFRAME_ESC, 0x84, YFRAME_END, YFRAME_START, 0xFD, 0xFE, 0xFF
-};
+static uint8_t BANNED_CHARMAP[32] = {0};
+static bool charmap_inited = false;
 
-const int8_t YFRAME_BANNED_CHARS_SZ = 11;
+// Initialize the banned characters map. This is done to drop from O(n) from O(1) on banned chars lookup
+void __yframe_init_banned_charmap() {
+	const unsigned char YFRAME_BANNED_CHARS[] = {
+		0x00, 0x11, 0x13, 0x1A, YFRAME_ESC, 0x84, YFRAME_END, YFRAME_START, 0xFD, 0xFE, 0xFF
+	};
+	
+	for( size_t i=0; i<sizeof(YFRAME_BANNED_CHARS); ++i )
+		BANNED_CHARMAP[ YFRAME_BANNED_CHARS[i] / 8 ] |= ( 1 << (YFRAME_BANNED_CHARS[i] % 8));
+}
 
 void yframe_print( void* _args)
 {
@@ -75,16 +82,10 @@ void yframe_ctx_free( yframe_ctx_t* ctx)
 
 bool yframe_is_banned_char( unsigned char c)
 {
-	int8_t n = YFRAME_BANNED_CHARS_SZ-1;
+	if ( !charmap_inited )
+		__yframe_init_banned_charmap();
 	
-	do
-	{
-		if ( c == YFRAME_BANNED_CHARS[n] )
-			return true;
-	}
-	while ( n-- > 0 );
-	
-	return false;
+	return ( BANNED_CHARMAP[ c/8 ] & (1 << ( c%8 )) ) != 0;
 }
 
 size_t yframe_encoded_size( const void* buf, size_t n)
@@ -143,7 +144,7 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 	if ( ctx == NULL || _in == NULL )
 		return;
 
-	unsigned char *in = (unsigned char *)in;
+	unsigned char *in = (unsigned char *)_in;
 	unsigned char c;
 	
 	while ( n-- > 0 )
