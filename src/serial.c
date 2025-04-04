@@ -55,7 +55,8 @@ serial_t allocate_serial()
 			// Initialize conds and mutexes
 			pthread_mutex_init( &__port_list[i].xoff_mutex, NULL);
 			pthread_cond_init( &__port_list[i].xoff_condition, NULL);
-
+			__port_list[i].xoff = false;
+			
 			// Initialize ringbuffers
 			__port_list[i].tx_buffer = ringbuffer_alloc( SERIAL_TX_BUFSIZE);
 			__port_list[i].rx_buffer = ringbuffer_alloc( SERIAL_RX_BUFSIZE);
@@ -87,24 +88,26 @@ void *serial_writer(void *arg)
 { 
 	serial_s *serial = (serial_s*) arg;
 	unsigned char buf;
+	size_t len;
 	
 	while (1) {
 		// Block thread if XOFF is asserted
 		pthread_mutex_lock( &serial->xoff_mutex);
-		while ( serial->xoff ) {
+		while ( serial->xoff == true ) {
 			pthread_cond_wait( &serial->xoff_condition, &serial->xoff_mutex);
 		}
 		pthread_mutex_unlock( &serial->xoff_mutex);
 		
 		// Sleeplock as long as the ring buffer is empty
-
-		while ( ringbuffer_bytes_available( serial->tx_buffer) == 0 ) {
+		while ( ringbuffer_bytes_used( serial->tx_buffer) == 0 ) {
+			usleep(1000);
 		}
 
 		// Write one byte from ring buffer
-		buf = ringbuffer_pull( &buf, 1, serial->tx_buffer);
+		len = ringbuffer_pull( &buf, 1, serial->tx_buffer);
 	
-		fwrite( &buf, 1, 1, serial->port);
+		fwrite( &buf, len, 1, serial->port);
+		printf("*");
 	}
 	return NULL;
 }
@@ -122,12 +125,14 @@ void *serial_reader( void *arg)
 		switch ( buf )
 		{
 		case XOFF:
+			printf("XOFF\n");
 			pthread_mutex_lock( &serial->xoff_mutex);
 			serial->xoff = true;
 			pthread_mutex_unlock( &serial->xoff_mutex);
 			continue;
 			
 		case XON:
+			printf("XON\n");
 			pthread_mutex_lock( &serial->xoff_mutex);
 			serial->xoff = false;
 			pthread_mutex_unlock( &serial->xoff_mutex);
@@ -184,8 +189,7 @@ size_t serial_send( serial_t portnum, void *buf, size_t len)
 		return 0;
 
 	size_t written = 0;
-	
-	do 
+	do
 		written += ringbuffer_push( buf+written, len-written, __port_list[portnum].tx_buffer);
 	while ( written < len);
 	
