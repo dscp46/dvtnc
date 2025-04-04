@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <termios.h>
 
 typedef int8_t serial_t;
 
@@ -18,18 +19,18 @@ typedef struct serial_stats_t {
 #define SERIAL_RX_BUFSIZE 2050
 
 // Open port
-serial_t serial_open(void);
+serial_t serial_open( const char* fname, speed_t speed);
 
 // Close port
 void serial_close( serial_t port);
 
 // Send data
-int16_t serial_send( serial_t port, void *buf, size_t len);
+size_t serial_send( serial_t portnum, void *buf, size_t len);
 
 // 
 uint16_t serial_get_outstanding_tx_bytes( serial_t port);
 
 // Receive data
-int16_t serial_recv( serial_t port, void **buf, size_t buf_size);
+size_t serial_recv( serial_t portnum, void *buf, size_t buf_size);
 
 #endif	/* __SERIAL_H */
