@@ -1,3 +1,4 @@
+#include "common.h"
 #include "serial.h"
 #include "ringbuffer.h"
 
@@ -88,7 +89,7 @@ void *serial_writer(void *arg)
 { 
 	serial_s *serial = (serial_s*) arg;
 	unsigned char buf;
-	size_t len;
+	unused size_t len;
 	
 	while (1) {
 		// Block thread if XOFF is asserted
@@ -106,8 +107,7 @@ void *serial_writer(void *arg)
 		// Write one byte from ring buffer
 		len = ringbuffer_pull( &buf, 1, serial->tx_buffer);
 	
-		fwrite( &buf, len, 1, serial->port);
-		printf("*");
+		write( fileno(serial->port), &buf, 1);
 	}
 	return NULL;
 }
