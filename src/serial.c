@@ -166,10 +166,10 @@ serial_t serial_open( const char* fname, speed_t speed)
 void serial_close( serial_t portnum)
 {
 	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
-		return 0;
+		return;
 
-	pthtead_cancel( &__port_list[portnum].tx_thread);
-	pthtead_cancel( &__port_list[portnum].rx_thread);
+	pthread_cancel( __port_list[portnum].tx_thread);
+	pthread_cancel( __port_list[portnum].rx_thread);
 
 	fclose( __port_list[portnum].port);
 	free_serial( portnum);
