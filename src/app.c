@@ -1,5 +1,8 @@
+#define __APP_C
+
 #include "app.h"
 #include "common.h"
+#include "kiss.h"
 
 #include <errno.h>
 #include <getopt.h>
@@ -73,7 +76,9 @@ void sigint_action( int signum, unused siginfo_t *info, unused void *ctx)
 	if ( signum != SIGINT )
 		return;
 
-	printf( "Caught SIGINT, quitting...\n");
+	printf( "\nCaught SIGINT, quitting...\n");
+	kiss_stop_server( _settings);
+	serial_close( _settings->serial);
 	exit(0);
 }
 

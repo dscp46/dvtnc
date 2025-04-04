@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <termios.h>
 
+//	Opaque serial port type
 typedef int8_t serial_t;
 
 typedef struct serial_stats_t {

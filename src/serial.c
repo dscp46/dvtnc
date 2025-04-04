@@ -34,14 +34,14 @@ typedef struct serial_s {
 serial_s __port_list[SERIAL_PORT_MAX];
 
 // The invalid opaque pointer, useful to report failed allocation
-const serial_t __INVALID_SERIAL_PORT = -1;
+const serial_t INVALID_SERIAL_PORT = -1;
 
 #define XON	0x11
 #define	XOFF	0x13
 
 // Internal definitions
-int8_t serial_restore( serial_t portnum, FILE *fd);
-int8_t serial_save( serial_t portnum, FILE *fd);
+int8_t serial_restore( serial_t portnum);
+int8_t serial_save( serial_t portnum);
 int8_t serial_configure( serial_t portnum, speed_t speed);
 
 // Allocate a serial port and return an opaque pointer. Return a negative value if allocation failed.
@@ -62,7 +62,7 @@ serial_t allocate_serial()
 			return i;
 		}
 	}
-	return __INVALID_SERIAL_PORT;
+	return INVALID_SERIAL_PORT;
 }
 
 void free_serial( serial_t port)
@@ -145,15 +145,16 @@ void *serial_reader( void *arg)
 serial_t serial_open( const char* fname, speed_t speed)
 {	
 	if ( fname == NULL )
-		return __INVALID_SERIAL_PORT;
+		return INVALID_SERIAL_PORT;
 
 	FILE* fport = fopen( fname, "r+"); 
 	
 	if ( fport == NULL )
-		return __INVALID_SERIAL_PORT;
+		return INVALID_SERIAL_PORT;
 	
 	serial_t portnum = allocate_serial();
 	__port_list[portnum].port = fport;
+	serial_save( portnum);
 	serial_configure( portnum, speed);
 	
 	pthread_create( &__port_list[portnum].tx_thread, NULL, serial_writer, &__port_list[portnum]);
@@ -171,6 +172,7 @@ void serial_close( serial_t portnum)
 	pthread_cancel( __port_list[portnum].tx_thread);
 	pthread_cancel( __port_list[portnum].rx_thread);
 
+	serial_restore( portnum);
 	fclose( __port_list[portnum].port);
 	free_serial( portnum);
 }
@@ -181,7 +183,13 @@ size_t serial_send( serial_t portnum, void *buf, size_t len)
 	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
 		return 0;
 
-	return fwrite( buf, len, 1, __port_list[portnum].port);
+	size_t written = 0;
+	
+	do 
+		written += ringbuffer_push( buf+written, len-written, __port_list[portnum].tx_buffer);
+	while ( written < len);
+	
+	return len;
 }
 
 // Receive data
@@ -193,12 +201,12 @@ size_t serial_recv( serial_t portnum, void *buf, size_t buf_size)
 	return fread( buf, buf_size, 1, __port_list[portnum].port);
 }
 
-int8_t serial_save( serial_t portnum, FILE *fd)
+int8_t serial_save( serial_t portnum)
 {
 	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
 		return 2;
 
-	if( tcgetattr( fileno(fd), &__port_list[portnum].serial_settings) != 0)
+	if( tcgetattr( fileno(__port_list[portnum].port), &__port_list[portnum].serial_settings) != 0)
 	{
 		fprintf( stderr, "Error when saving serial device settings:  %s\n", strerror( errno));
 		return 1;
@@ -206,12 +214,12 @@ int8_t serial_save( serial_t portnum, FILE *fd)
 	return 0;
 }
 
-int8_t serial_restore( serial_t portnum, FILE *fd)
+int8_t serial_restore( serial_t portnum)
 {
 	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
 		return 2;
 		
-	if( tcsetattr( fileno(fd), TCSANOW, &__port_list[portnum].serial_settings) != 0)
+	if( tcsetattr( fileno(__port_list[portnum].port), TCSANOW, &__port_list[portnum].serial_settings) != 0)
 	{
 		fprintf( stderr, "Error when restoring serial device settings: %s\n", strerror( errno));
 		return 1;

@@ -1,7 +1,8 @@
 #include "app.h"
 #include "common.h"
+#include "kiss.h"
 #include "ringbuffer.h"
-#include "serial.h"
+
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -19,6 +20,10 @@ int main( int argc, char *argv[], unused char *envp[])
 		exit(0);
 	}
 	
+	settings.serial = serial_open(  settings.serial_fname, B9600);
+	kiss_start_server( &settings);
+	
+	_settings = &settings;
 	set_signals();
 	
 	printf( "Application started.\n");

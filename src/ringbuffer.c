@@ -24,7 +24,7 @@ ringbuffer_t* ringbuffer_alloc( size_t size)
 	}
 
 	
-	if ( pthread_mutex_init( &buf->mutex, NULL) == 0 )
+	if ( pthread_mutex_init( &buf->mutex, NULL) != 0 )
 	{
 		ringbuffer_free( buf);
 		return NULL;
