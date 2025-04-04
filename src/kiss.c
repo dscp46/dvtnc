@@ -1,5 +1,6 @@
 #include "app.h"
 #include "kiss.h"
+#include "yframe.h"
 
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -18,7 +19,7 @@ typedef struct kiss_srv_args_t {
 void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 {
 	unsigned char *ptr = (unsigned char*)buffer;
-	size_t i = n;
+	size_t i = n-1;
 	
 	uint8_t type = (uint8_t) *ptr++;
 	
@@ -31,7 +32,15 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 		printf("\n");
 		
 		// TODO: Encapsulate in a YFRAME
-		serial_send( settings->serial, buffer, n);
+		void *encoded = NULL;
+    	size_t encoded_size = 0;
+    
+    	yframe_encode(buffer, n, &encoded, &encoded_size);
+		serial_send( settings->serial, encoded, encoded_size);
+		
+		if ( encoded != NULL )
+			free( encoded);
+
 		break;
 		
 	case 0x01:
