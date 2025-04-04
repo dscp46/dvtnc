@@ -57,11 +57,11 @@ void ringbuffer_free( ringbuffer_t *rbuf)
 	free( rbuf);
 }
 
-/** 
+/**
  * @brief Get how many bytes can be written at the moment
  *   buf->mutex needs to be locked before calling this function.
- * @param[in] buf	The ringbuffer we want to check (ringbuffer_t*) 
- * @return 	Number of available bytes to be written, at a given time.(size_t)
+ * @param[in] buf	The ringbuffer we want to check (ringbuffer_t*)
+ * @return 	Number of available bytes to be written, at a given time. (size_t)
  */
 size_t ringbuffer_bytes_available( const ringbuffer_t *buf)
 {
@@ -69,6 +69,19 @@ size_t ringbuffer_bytes_available( const ringbuffer_t *buf)
 	size_t used = (buf->cur_write - buf->cur_read + buf->size) % buf->size;
 
 	return buf->size - used - 1;
+}
+
+/**
+ * @brief Get how many bytes can be read at the moment
+ * @param[in] buf	The ringbuffer we want to check (ringbuffer_t*)
+ * @return 	Number of available bytes to be read, at a given time. (size_t)
+ */
+size_t ringbuffer_bytes_used( const ringbuffer_t *buf)
+{
+	// Distance between read and write pointers in a circular manner
+	size_t used = (buf->cur_write - buf->cur_read + buf->size) % buf->size;
+
+	return used;
 }
 
 /**
