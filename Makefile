@@ -3,7 +3,7 @@ CCFLAGS=-Wall -Wextra -fPIE -pie -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -Wformat 
 BUILDDIR=./build
 SRCDIR=./src
 LIBS=-lpthread
-objects=$(addprefix $(BUILDDIR)/, main.o ringbuffer.o serial.o yframe.o)
+objects=$(addprefix $(BUILDDIR)/, main.o app.o ringbuffer.o serial.o yframe.o)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c -o $@ $< $(CCFLAGS)
