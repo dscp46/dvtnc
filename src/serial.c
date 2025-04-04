@@ -156,12 +156,21 @@ serial_t serial_open( const char* fname, speed_t speed)
 	__port_list[portnum].port = fport;
 	serial_configure( portnum, speed);
 	
+	pthread_create( &__port_list[portnum].tx_thread, NULL, serial_writer, &__port_list[portnum]);
+	pthread_create( &__port_list[portnum].rx_thread, NULL, serial_reader, &__port_list[portnum]);
+	
 	return portnum;
 }
 
 // Close port
 void serial_close( serial_t portnum)
 {
+	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
+		return 0;
+
+	pthtead_cancel( &__port_list[portnum].tx_thread);
+	pthtead_cancel( &__port_list[portnum].rx_thread);
+
 	fclose( __port_list[portnum].port);
 	free_serial( portnum);
 }
@@ -186,6 +195,9 @@ size_t serial_recv( serial_t portnum, void *buf, size_t buf_size)
 
 int8_t serial_save( serial_t portnum, FILE *fd)
 {
+	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
+		return 2;
+
 	if( tcgetattr( fileno(fd), &__port_list[portnum].serial_settings) != 0)
 	{
 		fprintf( stderr, "Error when saving serial device settings:  %s\n", strerror( errno));
@@ -196,6 +208,9 @@ int8_t serial_save( serial_t portnum, FILE *fd)
 
 int8_t serial_restore( serial_t portnum, FILE *fd)
 {
+	if ( portnum < 0 || portnum >= SERIAL_PORT_MAX || __port_list[portnum].used == false)
+		return 2;
+		
 	if( tcsetattr( fileno(fd), TCSANOW, &__port_list[portnum].serial_settings) != 0)
 	{
 		fprintf( stderr, "Error when restoring serial device settings: %s\n", strerror( errno));
