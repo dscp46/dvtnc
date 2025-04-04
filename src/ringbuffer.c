@@ -76,10 +76,12 @@ size_t ringbuffer_bytes_available( const ringbuffer_t *buf)
  * @param[in] buf	The ringbuffer we want to check (ringbuffer_t*)
  * @return 	Number of available bytes to be read, at a given time. (size_t)
  */
-size_t ringbuffer_bytes_used( const ringbuffer_t *buf)
+size_t ringbuffer_bytes_used( ringbuffer_t *buf)
 {
+	pthread_mutex_lock( &buf->mutex);
 	// Distance between read and write pointers in a circular manner
 	size_t used = (buf->cur_write - buf->cur_read + buf->size) % buf->size;
+	pthread_mutex_unlock( &buf->mutex);
 
 	return used;
 }

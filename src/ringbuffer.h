@@ -18,6 +18,6 @@ void ringbuffer_free( ringbuffer_t *rbuf);
 size_t ringbuffer_pull( void *dest, size_t n, ringbuffer_t *buf);
 size_t ringbuffer_push( const void *src, size_t n, ringbuffer_t *buf);
 size_t ringbuffer_bytes_available( const ringbuffer_t *buf);
-size_t ringbuffer_bytes_used( const ringbuffer_t *buf);
+size_t ringbuffer_bytes_used( ringbuffer_t *buf);
 
 #endif	/* __RINGBUFFER_H */
