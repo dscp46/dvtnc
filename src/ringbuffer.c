@@ -23,8 +23,8 @@ ringbuffer_t* ringbuffer_alloc( size_t size)
 		return NULL;
 	}
 
-	pthread_mutex_init( buf->mutex, NULL);
-	if ( buf->mutex == NULL )
+	
+	if ( pthread_mutex_init( &buf->mutex, NULL) == 0 )
 	{
 		ringbuffer_free( buf);
 		return NULL;
@@ -52,10 +52,7 @@ void ringbuffer_free( ringbuffer_t *rbuf)
 
 	rbuf->buffer = NULL;
 	
-	if ( rbuf->mutex != NULL )
-		pthread_mutex_destroy( rbuf->mutex);
-	
-	rbuf->mutex = NULL;
+	pthread_mutex_destroy( &rbuf->mutex);
 
 	free( rbuf);
 }
@@ -88,7 +85,7 @@ size_t ringbuffer_pull( void *dest, size_t n, ringbuffer_t *buf)
 	if ( buf == NULL || dest == NULL )
 		return 0;
 
-	pthread_mutex_lock( buf->mutex);
+	pthread_mutex_lock( &buf->mutex);
 
 	size_t used_bytes = (buf->cur_write - buf->cur_read + buf->size) % buf->size;
 	size_t n_read = ( n <= used_bytes ) ? n : used_bytes;
@@ -104,7 +101,7 @@ size_t ringbuffer_pull( void *dest, size_t n, ringbuffer_t *buf)
 			buf->cur_read = buf->buffer;
 	}
 	
-	pthread_mutex_unlock( buf->mutex);
+	pthread_mutex_unlock( &buf->mutex);
 	
 	return n_read;
 }
@@ -122,7 +119,7 @@ size_t ringbuffer_push( const void *src, size_t n, ringbuffer_t *buf)
 	if ( buf == NULL || src == NULL)
 		return 0;
 	
-	pthread_mutex_lock( buf->mutex);
+	pthread_mutex_lock( &buf->mutex);
 	
 	size_t avail_bytes = ringbuffer_bytes_available( buf);
 	
@@ -138,7 +135,7 @@ size_t ringbuffer_push( const void *src, size_t n, ringbuffer_t *buf)
 			buf->cur_write = buf->buffer;
 	}
 
-	pthread_mutex_unlock( buf->mutex);
+	pthread_mutex_unlock( &buf->mutex);
 	
 	return n_written;
 }
