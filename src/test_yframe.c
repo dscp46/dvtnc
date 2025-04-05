@@ -4,7 +4,7 @@
 #include <assert.h>
 
 void test_yframe_ctx_create_and_free() {
-    yframe_ctx_t *ctx = yframe_ctx_create(128, NULL);
+    yframe_ctx_t *ctx = yframe_ctx_create(128, NULL, NULL);
     assert(ctx != NULL);
     assert(ctx->frame_buffer != NULL);
     assert(ctx->mtu == 128);
@@ -54,7 +54,7 @@ void test_received_frame( void *args)
 }
 
 void test_yframe_receive() {
-    yframe_ctx_t *ctx = yframe_ctx_create(128, &test_received_frame);
+    yframe_ctx_t *ctx = yframe_ctx_create(128, &test_received_frame, NULL);
     unsigned char frame[] = {0xE1, 0x01, 0x50, 0xE0};
     yframe_receive(ctx, frame, sizeof(frame));
     yframe_ctx_free(ctx);

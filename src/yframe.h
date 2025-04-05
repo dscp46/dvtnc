@@ -11,9 +11,11 @@ typedef enum {
 	UNESC_NEXT,
 } yframe_state_t;
 
+// Callback function arguments
 typedef struct yframe_cb_args_t {
 	void *buf;
 	size_t n;
+	void *extra_arg;
 } yframe_cb_args_t;
 
 typedef void (*yframe_rx_callback)( void*);
@@ -31,11 +33,15 @@ typedef struct yframe_ctx_t {
 	// The Maximum Transmission Unit, acts as the buffer's size
 	size_t mtu;
 	
+	// The callback function that will be called once valid frames are received.
 	yframe_rx_callback process_frame;
+	
+	// Extra argument to pass to the reception callback
+	void *process_extra_arg;
 } yframe_ctx_t;
 
 
-yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame);
+yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, void *process_extra_arg);
 
 void yframe_ctx_free( yframe_ctx_t* ctx);
 

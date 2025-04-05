@@ -45,7 +45,7 @@ void yframe_print( void* _args)
 	printf( "\n");
 }
 
-yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame)
+yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, void *process_extra_arg)
 {
 	yframe_ctx_t* ctx = (yframe_ctx_t*) malloc( sizeof(yframe_ctx_t));
 	if ( ctx == NULL )
@@ -63,6 +63,7 @@ yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame)
 	ctx->state = UNSYNCED;
 	
 	ctx->process_frame = ( process_frame != NULL ) ? process_frame : yframe_print;
+	ctx->process_extra_arg = process_extra_arg;
 	
 	return ctx;
 }
@@ -172,6 +173,7 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 					yframe_cb_args_t args;
 					args.buf = ctx->frame_buffer;
 					args.n = ctx->cur_buf_size;
+					args.extra_arg = ctx->process_extra_arg;
 					(*ctx->process_frame)( &args);
 				}
 				
