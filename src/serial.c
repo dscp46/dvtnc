@@ -12,12 +12,14 @@
 typedef struct serial_s {
 	bool  used;
 	FILE* port;
-	ringbuffer_t *rx_buffer;
+	//ringbuffer_t *rx_buffer;
 	ringbuffer_t *tx_buffer;
 	
 	bool xoff;
 	pthread_mutex_t xoff_mutex;
 	pthread_cond_t  xoff_condition;
+	
+	pthread_mutex_t rx_mutex;
 	
 	// Pre-existing serial settings
 	struct termios serial_settings;
@@ -26,6 +28,8 @@ typedef struct serial_s {
 	pthread_t rx_thread;
 	
 	serial_stats_t stats;
+	
+	serial_callback_t process_rx_data;
 } serial_s;
 
 // Max number of serial ports
@@ -58,9 +62,11 @@ serial_t allocate_serial()
 			pthread_cond_init( &__port_list[i].xoff_condition, NULL);
 			__port_list[i].xoff = false;
 			
+			pthread_mutex_init( &__port_list[i].rx_mutex, NULL);
+			
 			// Initialize ringbuffers
 			__port_list[i].tx_buffer = ringbuffer_alloc( SERIAL_TX_BUFSIZE);
-			__port_list[i].rx_buffer = ringbuffer_alloc( SERIAL_RX_BUFSIZE);
+			//__port_list[i].rx_buffer = ringbuffer_alloc( SERIAL_RX_BUFSIZE);
 			return i;
 		}
 	}
@@ -77,8 +83,10 @@ void free_serial( serial_t port)
 
 	pthread_mutex_destroy( &__port_list[port].xoff_mutex );
 	pthread_cond_destroy( &__port_list[port].xoff_condition );
+	
+	pthread_mutex_destroy( &__port_list[port].rx_mutex );
 
-	ringbuffer_free( __port_list[port].rx_buffer );
+	//ringbuffer_free( __port_list[port].rx_buffer );
 	ringbuffer_free( __port_list[port].tx_buffer );
 	// Mark the port as unused
 	__port_list[port].used = false;		
@@ -117,10 +125,11 @@ void *serial_reader( void *arg)
 	// TODO: read a few bytes at once, define buffer size
 	serial_s *serial = (serial_s*) arg;
 	unsigned char buf;
+	size_t bytes_read;
 	
 	while (1) {
 		// Read 1 byte from serial port
-		fread( &buf, 1, 1, serial->port);
+		bytes_read = fread( &buf, 1, 1, serial->port);
 		
 		switch ( buf )
 		{
@@ -139,15 +148,20 @@ void *serial_reader( void *arg)
 			continue;
 			
 		default:
-			// TODO: Add char to read buffer
-			ringbuffer_push( &buf, 1, serial->rx_buffer);
+			// Pass data to the upper layer
+			pthread_mutex_lock( &serial->rx_mutex);
+			
+			if ( serial->process_rx_data != NULL )
+				(*serial->process_rx_data)( &buf, bytes_read);
+				
+			pthread_mutex_unlock( &serial->rx_mutex);
 		}
 	}
 	return NULL;
 }
 
 // Open serial port, returns an opaque designator.
-serial_t serial_open( const char* fname, speed_t speed)
+serial_t serial_open( const char* fname, speed_t speed, serial_callback_t process_rx_data)
 {	
 	if ( fname == NULL )
 		return INVALID_SERIAL_PORT;
@@ -161,6 +175,8 @@ serial_t serial_open( const char* fname, speed_t speed)
 	__port_list[portnum].port = fport;
 	serial_save( portnum);
 	serial_configure( portnum, speed);
+	
+	__port_list[portnum].process_rx_data = process_rx_data;
 	
 	pthread_create( &__port_list[portnum].tx_thread, NULL, serial_writer, &__port_list[portnum]);
 	pthread_create( &__port_list[portnum].rx_thread, NULL, serial_reader, &__port_list[portnum]);
@@ -180,6 +196,17 @@ void serial_close( serial_t portnum)
 	serial_restore( portnum);
 	fclose( __port_list[portnum].port);
 	free_serial( portnum);
+}
+
+
+void serial_update_rx_processor( serial_t port, serial_callback_t process_rx_data)
+{
+	if ( port < 0 || port >= SERIAL_PORT_MAX || __port_list[port].used == false )
+		return;
+	
+	pthread_mutex_lock( &__port_list[port].rx_mutex);
+	__port_list[port].process_rx_data = process_rx_data;
+	pthread_mutex_unlock( &__port_list[port].rx_mutex);
 }
 
 // Send data
