@@ -29,7 +29,8 @@ typedef struct serial_s {
 	
 	serial_stats_t stats;
 	
-	serial_callback_t process_rx_data;
+	serial_callback_t process_rx;
+	void *process_rx_ctx;
 } serial_s;
 
 // Max number of serial ports
@@ -151,8 +152,8 @@ void *serial_reader( void *arg)
 			// Pass data to the upper layer
 			pthread_mutex_lock( &serial->rx_mutex);
 			
-			if ( serial->process_rx_data != NULL )
-				(*serial->process_rx_data)( &buf, bytes_read);
+			if ( serial->process_rx != NULL )
+				(*serial->process_rx)( serial->process_rx_ctx, &buf, bytes_read);
 				
 			pthread_mutex_unlock( &serial->rx_mutex);
 		}
@@ -161,7 +162,7 @@ void *serial_reader( void *arg)
 }
 
 // Open serial port, returns an opaque designator.
-serial_t serial_open( const char* fname, speed_t speed, serial_callback_t process_rx_data)
+serial_t serial_open( const char* fname, speed_t speed)
 {	
 	if ( fname == NULL )
 		return INVALID_SERIAL_PORT;
@@ -175,8 +176,6 @@ serial_t serial_open( const char* fname, speed_t speed, serial_callback_t proces
 	__port_list[portnum].port = fport;
 	serial_save( portnum);
 	serial_configure( portnum, speed);
-	
-	__port_list[portnum].process_rx_data = process_rx_data;
 	
 	pthread_create( &__port_list[portnum].tx_thread, NULL, serial_writer, &__port_list[portnum]);
 	pthread_create( &__port_list[portnum].rx_thread, NULL, serial_reader, &__port_list[portnum]);
@@ -199,13 +198,14 @@ void serial_close( serial_t portnum)
 }
 
 
-void serial_update_rx_processor( serial_t port, serial_callback_t process_rx_data)
+void serial_update_rx_processor( serial_t port, serial_callback_t process_rx, void *process_rx_ctx)
 {
 	if ( port < 0 || port >= SERIAL_PORT_MAX || __port_list[port].used == false )
 		return;
 	
 	pthread_mutex_lock( &__port_list[port].rx_mutex);
-	__port_list[port].process_rx_data = process_rx_data;
+	__port_list[port].process_rx = process_rx;
+	__port_list[port].process_rx_ctx = process_rx_ctx;
 	pthread_mutex_unlock( &__port_list[port].rx_mutex);
 }
 
