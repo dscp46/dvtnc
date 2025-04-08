@@ -11,6 +11,9 @@
 
 #define BUFFER_SIZE 1460
 
+// AX.25 frame: 1024b, Start & End markers: 2b, CRC32: 4b, Type: 1b 
+#define RX_MTU 1031
+
 typedef struct kiss_srv_args_t {
 	app_settings_t *settings;
 	int client_fd;
@@ -122,6 +125,32 @@ void *kiss_handle_client( void *arg)
     return NULL;
 }
 
+void kiss_dispatch_processed_frame( void *arg)
+{
+	
+	yframe_cb_args_t *args = (yframe_cb_args_t *)arg;
+	app_settings_t *settings = (app_settings_t*)args->extra_arg;
+	unsigned char* data = (unsigned char*)args->buf;
+	
+	switch( data[0] )
+	{
+	case 0x00:
+		// Data frame.
+		// FIXME: Pass down the frame to the AX.25 DSE layer for switching
+		send( settings->client_fd, data+1, args->n-1, 0);
+		
+		break;
+	default:
+		fprintf( stderr, "Received a data frame with unknown type: %x", data[0]);
+	}
+}
+
+void kiss_yframe_pass( void *ctx, void *buf, size_t n)
+{
+	app_settings_t *settings = (app_settings_t*)ctx;
+	yframe_receive( settings->yframe_rx_ctx, buf, n);
+}
+
 void *kiss_server( void *arg)
 {
 	if ( arg == NULL )
@@ -163,13 +192,21 @@ void *kiss_server( void *arg)
             continue;
         }
         
-		args->settings = settings;
-		args->client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+	args->settings = settings;
+	args->client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+	
         if (args->client_fd == -1) {
             perror("Accept failed");
             free(args);
             continue;
         }
+        
+        // FIXME: Insert the client FD into a hashmap
+        settings->client_fd = args->client_fd;
+        
+        // Set up a receiver function for the current interface
+        settings->yframe_rx_ctx = yframe_ctx_create( RX_MTU, &kiss_dispatch_processed_frame, &settings);
+        serial_update_rx_processor( settings->serial, &kiss_yframe_pass, &settings);
 
         pthread_t thread_id;
         if (pthread_create(&thread_id, NULL, kiss_handle_client, args) != 0) {
