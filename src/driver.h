@@ -6,7 +6,7 @@
 // Callback function for received frames
 typedef size_t (*driver_rx_callback_t)( void *buf, size_t buf_sz);
 
-struct tx_model {
+typedef struct tx_model {
 	//  Device basics: Open and close device
 	int (*open)( const char* path, void *config);
 	void (*close)( int fd);
@@ -22,7 +22,7 @@ struct tx_model {
 	void *self;
 } tx_model;
 
-struct device {
+typedef struct device {
 	void (*qsy)( uint64_t freq);
 	void (*save_cfg)( void *cfg);
 	void (*configure)( void);
