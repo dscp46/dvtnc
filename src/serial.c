@@ -279,7 +279,8 @@ int8_t serial_configure( serial_t portnum, speed_t speed)
 
 	// Disable software flow control and disable special chars handling
 	stty.c_lflag &= ~( ICANON | ECHO | ECHOE | ECHONL | ISIG );
-	stty.c_iflag &= ~( IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON | IXOFF| IXANY);
+	stty.c_iflag &= ~( IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXANY);
+	stty.c_iflag |= IXON | IXOFF;
 
 	stty.c_oflag &= ~( OPOST | ONLCR);
 	
