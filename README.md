@@ -31,7 +31,7 @@ yEncoding parameters:
   * Start Marker: `0xE1`
   * End Marker: `0xE0`
   * Escape character: `=` (`0x3D`)
-  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus special characters)
+  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
   * Offset: 64
 
 ## Control channel
