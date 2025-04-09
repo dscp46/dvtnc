@@ -137,8 +137,17 @@ void kiss_dispatch_processed_frame( void *arg)
 	case 0x00:
 		// Data frame.
 		// FIXME: Pass down the frame to the AX.25 DSE layer for switching
-		send( settings->client_fd, data+1, args->n-1, 0);
-		
+		unsigned char *frame = malloc( args->n+2);
+		if ( frame == NULL )
+		{
+			fprintf( stderr, "kiss_displatch_processed_frame: memory alloc failed.\n");
+			break;
+		}
+		frame[0] = 0xC0;
+		frame[args->n+1] = 0xC0;
+		memcpy( frame+1, data, args->n);
+		send( settings->client_fd, frame, args->n+2, 0);
+		free( frame);	
 		break;
 	default:
 		fprintf( stderr, "Received a data frame with unknown type: %x", data[0]);
@@ -184,7 +193,13 @@ void *kiss_server( void *arg)
         exit(EXIT_FAILURE);
     }
     printf("KISS Server listening on port %d\n", settings->kiss_port);
-    
+   
+    settings->yframe_rx_ctx = yframe_ctx_create( RX_MTU, kiss_dispatch_processed_frame, settings);
+
+    // Set up a receiver function for the current interface
+    serial_update_rx_processor( settings->serial, kiss_yframe_pass, settings);
+
+
     while (1) {
     	kiss_srv_args_t *args = malloc(sizeof(kiss_srv_args_t));
         if (!args) {
@@ -204,10 +219,6 @@ void *kiss_server( void *arg)
         // FIXME: Insert the client FD into a hashmap
         settings->client_fd = args->client_fd;
         
-        // Set up a receiver function for the current interface
-        settings->yframe_rx_ctx = yframe_ctx_create( RX_MTU, &kiss_dispatch_processed_frame, &settings);
-        serial_update_rx_processor( settings->serial, &kiss_yframe_pass, &settings);
-
         pthread_t thread_id;
         if (pthread_create(&thread_id, NULL, kiss_handle_client, args) != 0) {
             perror("Thread creation failed");
