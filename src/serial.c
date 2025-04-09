@@ -12,13 +12,8 @@
 typedef struct serial_s {
 	bool  used;
 	FILE* port;
-	//ringbuffer_t *rx_buffer;
+	
 	ringbuffer_t *tx_buffer;
-	
-	bool xoff;
-	pthread_mutex_t xoff_mutex;
-	pthread_cond_t  xoff_condition;
-	
 	pthread_mutex_t rx_mutex;
 	
 	// Pre-existing serial settings
@@ -42,9 +37,6 @@ serial_s __port_list[SERIAL_PORT_MAX];
 // The invalid opaque pointer, useful to report failed allocation
 const serial_t INVALID_SERIAL_PORT = -1;
 
-#define XON	0x11
-#define	XOFF	0x13
-
 // Internal definitions
 int8_t serial_restore( serial_t portnum);
 int8_t serial_save( serial_t portnum);
@@ -58,16 +50,12 @@ serial_t allocate_serial()
 		if ( __port_list[i].used == false )
 		{
 			__port_list[i].used = true;
-			// Initialize conds and mutexes
-			pthread_mutex_init( &__port_list[i].xoff_mutex, NULL);
-			pthread_cond_init( &__port_list[i].xoff_condition, NULL);
-			__port_list[i].xoff = false;
-			
+
+			// Initialize mutexes
 			pthread_mutex_init( &__port_list[i].rx_mutex, NULL);
 			
 			// Initialize ringbuffers
 			__port_list[i].tx_buffer = ringbuffer_alloc( SERIAL_TX_BUFSIZE);
-			//__port_list[i].rx_buffer = ringbuffer_alloc( SERIAL_RX_BUFSIZE);
 			return i;
 		}
 	}
@@ -81,14 +69,10 @@ void free_serial( serial_t port)
 	//	- The opaque pointer is out of bounds. (Segfault handling for later?)
 	if ( port < 0 || port >= SERIAL_PORT_MAX )
 		return;
-
-	pthread_mutex_destroy( &__port_list[port].xoff_mutex );
-	pthread_cond_destroy( &__port_list[port].xoff_condition );
 	
 	pthread_mutex_destroy( &__port_list[port].rx_mutex );
-
-	//ringbuffer_free( __port_list[port].rx_buffer );
 	ringbuffer_free( __port_list[port].tx_buffer );
+	
 	// Mark the port as unused
 	__port_list[port].used = false;		
 }
@@ -101,13 +85,6 @@ void *serial_writer(void *arg)
 	unused size_t len;
 	
 	while (1) {
-		// Block thread if XOFF is asserted
-		pthread_mutex_lock( &serial->xoff_mutex);
-		while ( serial->xoff == true ) {
-			pthread_cond_wait( &serial->xoff_condition, &serial->xoff_mutex);
-		}
-		pthread_mutex_unlock( &serial->xoff_mutex);
-		
 		// Sleeplock as long as the ring buffer is empty
 		while ( ringbuffer_bytes_used( serial->tx_buffer) == 0 ) {
 			usleep(1000);
@@ -132,31 +109,14 @@ void *serial_reader( void *arg)
 		// Read 1 byte from serial port
 		bytes_read = fread( &buf, 1, 1, serial->port);
 		
-		switch ( buf )
-		{
-		case XOFF:
-			printf("XOFF\n");
-			pthread_mutex_lock( &serial->xoff_mutex);
-			serial->xoff = true;
-			pthread_mutex_unlock( &serial->xoff_mutex);
-			continue;
+
+		// Pass data to the upper layer
+		pthread_mutex_lock( &serial->rx_mutex);
+		
+		if ( serial->process_rx != NULL )
+			(*serial->process_rx)( serial->process_rx_ctx, &buf, bytes_read);
 			
-		case XON:
-			printf("XON\n");
-			pthread_mutex_lock( &serial->xoff_mutex);
-			serial->xoff = false;
-			pthread_mutex_unlock( &serial->xoff_mutex);
-			continue;
-			
-		default:
-			// Pass data to the upper layer
-			pthread_mutex_lock( &serial->rx_mutex);
-			
-			if ( serial->process_rx != NULL )
-				(*serial->process_rx)( serial->process_rx_ctx, &buf, bytes_read);
-				
-			pthread_mutex_unlock( &serial->rx_mutex);
-		}
+		pthread_mutex_unlock( &serial->rx_mutex);
 	}
 	return NULL;
 }
