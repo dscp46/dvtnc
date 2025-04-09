@@ -109,13 +109,25 @@ void *serial_reader( void *arg)
 		// Read 1 byte from serial port
 		bytes_read = fread( &buf, 1, 1, serial->port);
 		
+		if ( bytes_read == 0 )
+		{
+			if ( errno != EAGAIN && errno != EWOULDBLOCK )
+			{
+				fprintf( stderr, "IO error on serial port.");
+				// TODO: Attempt to restart the serial port?
+				break;
+			}
+
+			usleep(1000);
+			continue;
+		}
 
 		// Pass data to the upper layer
 		pthread_mutex_lock( &serial->rx_mutex);
-		
+
 		if ( serial->process_rx != NULL )
 			(*serial->process_rx)( serial->process_rx_ctx, &buf, bytes_read);
-			
+
 		pthread_mutex_unlock( &serial->rx_mutex);
 	}
 	return NULL;
