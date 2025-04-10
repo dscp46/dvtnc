@@ -1,48 +1,55 @@
 #include "dse.h"
 
+#include <stdlib.h>
+
 /***** Internal functions *****/
 
 // Deallocate the DSE
-void dse_free( dse_t *dse);
+void dse_free( struct dse *self);
 
-void dse_add_fib( dse_t *dse, char *callsign, int16_t iface_id, bool is_static);
+void dse_add_fib( struct dse *self, char *callsign, int16_t iface_id, bool is_static);
 
-void dse_del_fib( dse_t *dse, char *callsign);
-
+void dse_del_fib( struct dse *self, char *callsign);
 
 // Switch a frame
-void dse_switch_frame( dse_t *dse, void *frame, size_t len);
+void dse_switch_frame( struct dse *self, void *frame, size_t len);
 
 // Add a KISS interface to the DSE
-bool dse_kiss_add( dse_t *dse, serial_s *serial);
+bool dse_kiss_add( struct dse *self, serial_t *serial);
 
 // Close an active interface
-void dse_close_iface( dse_t *dse, int16_t ifnum);
+void dse_close_iface( struct dse *self, int16_t ifnum);
 
 /***** Implementation *****/
 
 // Instanciate a Digital Switching Equipment (DSE)
 dse *dse_create( void)
 {
-	dse *sw = malloc( sizeof( dse));
-	if ( sw == NULL )
+	struct dse *instance = (struct dse *) malloc( sizeof( struct dse));
+	if ( instance == NULL )
 		return NULL;
 	
-	dse_t *my_dse = malloc( sizeof( dse_t));
-	if ( my_dse == NULL )
+	// Define function pointers
+	instance->free = dse_free;
+	
+	dse_t *sw = malloc( sizeof( dse_t));
+	if ( sw == NULL )
 	{
-		dse_free( sw);
+		instance->free( instance);
 		return NULL;
 	}
-	
-	return sw;
+
+	instance->sw = sw;	
+	return instance;
 }
 
-void dse_free( dse_t *dse)
-{
-	if ( dse == NULL )
+void dse_free( struct dse *self)
+{	
+	if ( self == NULL )
 		return;
+
+	if ( self->sw != NULL )
+		free( self->sw);
 	
-	
-	free( dse);
+	free( self);
 }
