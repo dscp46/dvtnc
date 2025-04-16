@@ -3,7 +3,7 @@ CCFLAGS=-Wall -Wextra -fPIE -pie -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -Wformat 
 BUILDDIR=./build
 SRCDIR=./src
 LIBS=-lpthread
-objects=$(addprefix $(BUILDDIR)/, main.o app.o dse.o kiss.o ringbuffer.o serial.o yframe.o)
+objects=$(addprefix $(BUILDDIR)/, main.o app.o dse.o kiss.o ringbuffer.o serial.o yframe.o iface/kiss.o)
 
 dirs:
 	mkdir -p $(BUILDDIR)/iface
