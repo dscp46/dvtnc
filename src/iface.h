@@ -35,7 +35,7 @@ typedef struct ax_iface {
 	
 	// Function pointers
 	void (*send_frame)( struct ax_iface *self, void *frame, size_t len);
-	void (*close)( struct ax_iface *self);
+	void (*ifdown)( struct ax_iface *self);
 	
 	// UTHash Handle
 	UT_hash_handle hh;
