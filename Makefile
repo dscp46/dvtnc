@@ -11,6 +11,9 @@ dirs:
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c | dirs
 	$(CC) -c -o $@ $< $(CCFLAGS)
 
+$(BUILDDIR)/iface/%.o: $(SRCDIR)/iface/%.c | dirs
+	$(CC) -c -o $@ $< $(CCFLAGS)
+
 dvtnc: $(objects)
 	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
 
@@ -29,11 +32,8 @@ all: dvtnc
 .PHONY: clean
 
 clean: 
-	rm -f $(BUILDDIR)/*.o
-	rm -f dvtnc 
-	rm -f test_rbuffer
-	rm -f test_yframe
-	rm -f test_kiss
+	find $(BUILDDIR) -name '*.o' -delete
+	rm -f dvtnc test_rbuffer test_yframe test_kiss
 
 tests: CCFLAGS += -g
 tests: test_yframe test_rbuffer test_kiss

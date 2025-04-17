@@ -35,7 +35,7 @@ int main( void)
 		return 1;
 	}
 	
-	result = kiss_decode( input, sizeof(input), &decoded_type, decoded, &decoded_len);
+	result = kiss_decode( encoded, encoded_len, &decoded_type, decoded, &decoded_len);
 	
 	assert( result == 0 );
 	assert( decoded_type == 0x01 );
