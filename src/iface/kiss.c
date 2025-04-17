@@ -42,10 +42,12 @@ typedef struct kiss_iface_attrs {
 
 size_t kiss_encoded_size( const void* frame, size_t len);
 void kiss_encode( const void *in, size_t len, unsigned char type, void *out);
-int kiss_decode( const void *in, size_t len, unsigned char *type, void *out);
+int kiss_decode( const void *in, size_t len, unsigned char *type, void *out, size_t *decoded_len);
 
 void kiss_send( ax_iface *self, void *frame, size_t len);
 void *kiss_client_handler( void* arg);
+void kiss_recv( ax_iface *self, unsigned char type, const void *frame, size_t len);
+void kiss_print_frame( const void *frame, size_t len);
 
 /*** General functions ***/
 ax_iface *kiss_ifup( int client_fd, struct sockaddr* client_addr, size_t client_addr_sz)
@@ -162,7 +164,7 @@ void kiss_encode( const void *in, size_t len, unsigned char type, void *out)
 	*dst = FEND;
 }
 
-int kiss_decode( const void *in, size_t len, unsigned char *type, void *out)
+int kiss_decode( const void *in, size_t len, unsigned char *type, void *out, size_t *decoded_len)
 {
 	if ( in == NULL || type == NULL || out == NULL )
 		return EINVAL;
@@ -213,6 +215,8 @@ int kiss_decode( const void *in, size_t len, unsigned char *type, void *out)
 	
 	if ( *src != FEND )
 		return EBADMSG;
+
+	*decoded_len = dst - (unsigned char*)out;
 	
 	return 0;
 }
@@ -237,17 +241,32 @@ void *kiss_client_handler( void* arg)
 	kiss_iface_attrs *attrs = (kiss_iface_attrs*) self->p;
 	
 	unsigned char buffer[BUFFER_SIZE];
+	size_t bytes_read, decoded_len;
+	unsigned char *frame = NULL;
+	unsigned char frame_type;
+	int result;
 	
 	while (1) {
-		size_t bytes_read = recv(attrs->client_fd, buffer, BUFFER_SIZE - 1, 0);
+		bytes_read = recv(attrs->client_fd, buffer, BUFFER_SIZE - 1, 0);
 		if (bytes_read == 0) {
 			break;
 		}
 
-		if( buffer[0] == 0xC0 && buffer[bytes_read-1] == 0xC0 )
-			;// TODO: kiss_process_frame( buffer+1, bytes_read-2, settings);
+		frame = malloc( bytes_read);
+		if ( frame == NULL )
+		{
+			printf( "Unable to process frame due to memory allocation error.\n");
+			continue;
+		}
+
+		result = kiss_decode( buffer, bytes_read, &frame_type, frame, &decoded_len);
+
+		if( result == 0 )
+			kiss_recv( self, frame_type, frame, decoded_len);
 		else
-			printf(" Non-KISS frame received and discarded.");
+			printf("Non-KISS frame received and discarded.\n");
+
+		free( frame);
 	}
 	
 	printf("Client disconnected.\n");
@@ -262,3 +281,79 @@ void *kiss_client_handler( void* arg)
 	return NULL;
 }
 
+void kiss_recv( ax_iface *self, unsigned char type, const void *frame, size_t len)
+{
+	if ( self == NULL || self->p == NULL || frame == NULL )
+		return;
+
+	unsigned char *data = (unsigned char *)frame;
+	kiss_iface_attrs *attrs = (kiss_iface_attrs*) self->p;
+
+	switch( type & 0x0F )
+	{
+	case 0x00:
+		printf( "New data frame: ");
+		kiss_print_frame( frame, len);
+		printf( "\n");
+
+		// Switch frame
+		if ( attrs->sw != NULL && attrs->sw->switch_frame != NULL )
+			attrs->sw->switch_frame( attrs->sw, frame, len);
+
+		break;
+
+	case 0x01:
+		if( len >= 1 )
+			printf( "Set Tx Delay: %d ms.\n", 10*(uint8_t)*data);
+		else
+			printf( "Invalid command.");
+		break;
+
+	case 0x02:
+		if( len >= 1 )
+			printf( "Set Persistence: %d.\n", (uint8_t)*data);
+		else
+			printf( "Invalid command.");
+		break;
+
+	case 0x03:
+		if( len >= 1 )
+			printf( "Set Slot time: %d ms.\n", 10*(uint8_t)*data);
+		else
+			printf( "Invalid command.");
+		break;
+
+	case 0x04:
+		if( len >= 1 )
+			printf( "Set Tx tail: %d ms.\n", 10*(uint8_t)*data);
+		else
+			printf( "Invalid command.\n");
+		break;
+
+	case 0x05:
+		if( len >= 1 )
+			printf( "Duplex mode: %s\n", ((uint8_t)*data == 0) ? "Half" : "Full");
+		else
+			printf( "Invalid command.\n");
+		break;
+
+	case 0x0C:
+		// TODO: Handle IPOLL command
+		printf( "Received an IPOLL command");
+		break;
+
+	default:
+		printf( "Unsupported KISS command type");
+	}
+}
+
+void kiss_print_frame( const void *frame, size_t len)
+{
+	if ( frame == NULL )
+		return;
+
+	unsigned char *data = (unsigned char*)frame;
+
+	while ( len-- > 0)
+		printf( "%02X ", *data++);
+}

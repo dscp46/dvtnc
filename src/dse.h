@@ -47,7 +47,7 @@ typedef struct dse {
 	void (*del_rib)( struct dse *self, char *callsign);
 	void (*print_rib)( struct dse *self);
 	
-	void (*switch_frame)( struct dse *self, void *frame, size_t len);
+	void (*switch_frame)( struct dse *self, const void *frame, size_t len);
 	
 	bool (*dse_kiss_add)( struct dse *self, serial_t *serial);
 	void (*close_iface)( struct dse *self, int16_t ifnum);
