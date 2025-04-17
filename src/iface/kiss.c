@@ -16,12 +16,6 @@
 // AX.25 frame: 1024b, Start & End markers: 2b, CRC32: 4b, Type: 1b 
 #define RX_MTU 1031
 
-// KISS protocol magic values
-#define FEND	0xC0U
-#define FESC	0xDBU
-#define TFEND	0xDCU
-#define TFESC	0xDDU
-
 typedef struct kiss_iface_attrs {
 
 	// Client socket file descriptor
@@ -40,9 +34,7 @@ typedef struct kiss_iface_attrs {
 	dse *sw;
 } kiss_iface_attrs;
 
-size_t kiss_encoded_size( const void* frame, size_t len);
-void kiss_encode( const void *in, size_t len, unsigned char type, void *out);
-int kiss_decode( const void *in, size_t len, unsigned char *type, void *out, size_t *decoded_len);
+
 
 void kiss_send( ax_iface *self, void *frame, size_t len);
 void *kiss_client_handler( void* arg);

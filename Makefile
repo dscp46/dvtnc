@@ -21,6 +21,9 @@ test_rbuffer: $(addprefix $(BUILDDIR)/, test_rbuffer.o ringbuffer.o)
 test_yframe: $(addprefix $(BUILDDIR)/, test_yframe.o yframe.o)
 	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
 
+test_kiss: $(addprefix $(BUILDDIR)/, test_kiss.o iface/kiss.o)
+	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
+
 all: dvtnc
 
 .PHONY: clean
@@ -30,10 +33,13 @@ clean:
 	rm -f dvtnc 
 	rm -f test_rbuffer
 	rm -f test_yframe
+	rm -f test_kiss
 
-tests: test_yframe test_rbuffer
+tests: CCFLAGS += -g
+tests: test_yframe test_rbuffer test_kiss
 	./test_yframe
 	./test_rbuffer
+	./test_kiss
 
 symbols:
 	objdump -tC $(BUILDDIR)/*.o
