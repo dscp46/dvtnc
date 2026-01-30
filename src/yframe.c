@@ -16,7 +16,7 @@ static bool charmap_inited = false;
 // Initialize the banned characters map. This is done to drop from O(n) from O(1) on banned chars lookup
 void __yframe_init_banned_charmap() {
 	const unsigned char YFRAME_BANNED_CHARS[] = {
-		0x00, 0x11, 0x13, 0x1A, YFRAME_ESC, 0x84, YFRAME_END, YFRAME_START, 0xFD, 0xFE, 0xFF
+		0x00, 0x11, 0x13, 0x1A, 0x24, YFRAME_ESC, 0x84, YFRAME_END, YFRAME_START, 0xFD, 0xFE, 0xFF
 	};
 	
 	for( size_t i=0; i<sizeof(YFRAME_BANNED_CHARS); ++i )
@@ -46,7 +46,7 @@ void yframe_print( void* _args)
 }
 
 yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, void *process_extra_arg)
-{
+
 	yframe_ctx_t* ctx = (yframe_ctx_t*) malloc( sizeof(yframe_ctx_t));
 	if ( ctx == NULL )
 		return NULL;
