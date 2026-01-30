@@ -31,8 +31,10 @@ yEncoding parameters:
   * Start Marker: `0xE1`
   * End Marker: `0xE0`
   * Escape character: `=` (`0x3D`)
-  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
+  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x24`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
   * Offset: 64
+
+`0x84` is forbidden to avoid reproducing the "frame lost" pattern. `0x24` is forbidden to avoid triggering the D-PRS frame interpreter. `0x11` and `0x13` are used by software flow control, and `0xFD` to `0xFF` are used for CI-V commands.
 
 ## Control channel
 SetHardware commands can be used to control the radio, regardless of the port number.
