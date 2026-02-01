@@ -46,7 +46,7 @@ void yframe_print( void* _args)
 }
 
 yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, void *process_extra_arg)
-
+{
 	yframe_ctx_t* ctx = (yframe_ctx_t*) malloc( sizeof(yframe_ctx_t));
 	if ( ctx == NULL )
 		return NULL;
