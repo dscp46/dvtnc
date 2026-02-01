@@ -31,10 +31,18 @@ yEncoding parameters:
   * Start Marker: `0xE1`
   * End Marker: `0xE0`
   * Escape character: `=` (`0x3D`)
-  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x24`, `0x84`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
-  * Offset: 64
+  * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x24`, `0xCB`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
+  * Offset: 64 (0x40)
 
-`0x84` is forbidden to avoid reproducing the "frame lost" pattern. `0x24` is forbidden to avoid triggering the D-PRS frame interpreter. `0x11` and `0x13` are used by software flow control, and `0xFD` to `0xFF` are used for CI-V commands.
+D-Star references a "frame lost" padding pattern, which contains the sequence `E7 84 76` in the data part of a 20ms frame. `0x84` is forbidden to avoid reproducing that pattern (in the second segment of a DV Slow data stream). That value is given as scrambled. When unscrambled, the banned value is `0xCB`. It isn't necessary to escape other values, since the mitigation byte present in the Audio part of a frame is set to `0x02` to mute the AMBE decoder.
+
+`0x24` is escaped to avoid triggering the D-PRS frame interpreter.
+
+`0x11` and `0x13` are control characters used by the serial line software flow control.
+
+The `0xFD` to `0xFF` range is used by CI-V commands.
+
+The `0x00` was escaped in D-Rats, but the rationale wasn't documented. Also, it isn't referenced as a value of concern in  probably escaped to avoid issues with string
 
 ## Control channel
 SetHardware commands can be used to control the radio, regardless of the port number.
