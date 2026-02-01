@@ -34,7 +34,7 @@ yEncoding parameters:
   * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x24`, `0xCB`, `0xFD`, `0xFE`, `0xFF` (plus aforementioned characters)
   * Offset: 64 (0x40)
 
-D-Star references a "frame lost" padding pattern, which contains the sequence `E7 84 76` in the data part of a 20ms frame. `0x84` is forbidden to avoid reproducing that pattern (in the second segment of a DV Slow data stream). That value is given as scrambled. When unscrambled, the banned value is `0xCB`. It isn't necessary to escape other values, since the mitigation byte present in the Audio part of a frame is set to `0x02` to mute the AMBE decoder.
+D-Star references a "frame lost" padding pattern, which contains the sequence `E7 84 76` in the data part of a 20ms frame. `0x84` is forbidden to avoid reproducing that pattern (in the second segment of a DV Slow data stream). That value is given as scrambled. When unscrambled, the banned value is `0xCB`. When operating in Fast Data, it isn't necessary to escape other values, since the mitigation byte, present in the Audio part of a frame, is set to `0x02` to mute the AMBE decoder.
 
 `0x24` is escaped to avoid triggering the D-PRS frame interpreter.
 
