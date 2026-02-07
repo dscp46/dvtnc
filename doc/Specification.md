@@ -23,7 +23,7 @@ To ensure transmitted frames comply with this requirement, frames are encoded us
   * End of frame Marker: `0xE0`
   * Escape character: `0x3D` (ASCII character '=')
   * Forbidden characters: `0x00`, `0x11`, `0x13`, `0x1A`, `0x24`, `0xCB`, `0xFD`, `0xFE`, `0xFF`, on top of aforementioned characters.
-  * Escape Offset: `+64`. If the escaped value exceeds 255 (`0xFF`), the carry bit is discarded, such that the result stays a 8-bit value. Reciprocally, when unescaping an escaped value, the borrow bit is discarded, such the result stays a 8-bit value.
+  * Escape Offset: `+32`. If the escaped value exceeds 255 (`0xFF`), the carry bit is discarded, such that the result stays a 8-bit value. Reciprocally, when unescaping an escaped value, the borrow bit is discarded, such the result stays a 8-bit value.
   * Maximum unescaped packet size: at least 557 bytes (512 bytes payload, 17 bytes for AX.25 2.2 in Extended Asynchronous Balanced Mode, 28 bytes for an AXSec Authentication Header).
 
 Here is the justification for the various forbidden characters:
