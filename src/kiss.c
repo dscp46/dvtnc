@@ -157,7 +157,7 @@ void kiss_dispatch_processed_frame( void *arg)
 void kiss_yframe_pass( void *ctx, void *buf, size_t n)
 {
 	app_settings_t *settings = (app_settings_t*)ctx;
-	yframe_receive( settings->yframe_rx_ctx, buf, n);
+	settings->yframe_rx_ctx->receive( settings->yframe_rx_ctx, buf, n);
 }
 
 void *kiss_server( void *arg)

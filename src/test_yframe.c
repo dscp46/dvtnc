@@ -1,4 +1,6 @@
+#define YFRAME_INTERNALS
 #include "yframe.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -8,7 +10,7 @@ void test_yframe_ctx_create_and_free() {
     assert(ctx != NULL);
     assert(ctx->frame_buffer != NULL);
     assert(ctx->mtu == 128);
-    yframe_ctx_free(ctx);
+    ctx->free(ctx);
 }
 
 void test_yframe_is_banned_char() {
@@ -56,8 +58,8 @@ void test_received_frame( void *args)
 void test_yframe_receive() {
     yframe_ctx_t *ctx = yframe_ctx_create(128, &test_received_frame, NULL);
     unsigned char frame[] = {0xE1, 0x01, 0x50, 0xE0};
-    yframe_receive(ctx, frame, sizeof(frame));
-    yframe_ctx_free(ctx);
+    ctx->receive(ctx, frame, sizeof(frame));
+    ctx->free(ctx);
 }
 
 int main() {

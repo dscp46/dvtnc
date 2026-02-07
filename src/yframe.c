@@ -1,3 +1,4 @@
+#define YFRAME_INTERNALS
 #include "yframe.h"
 
 #include <stdio.h>
@@ -51,19 +52,15 @@ yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, v
 	if ( ctx == NULL )
 		return NULL;
 
+	utstring_new( ctx->frame_buffer);
+	
 	ctx->mtu = mtu;
-	ctx->frame_buffer = (char*) malloc( mtu);
-	if ( ctx->frame_buffer == NULL )
-	{
-		yframe_ctx_free( ctx);
-		return NULL;
-	}
-	
-	ctx->cur_buf_size = 0;
 	ctx->state = UNSYNCED;
-	
 	ctx->process_frame = ( process_frame != NULL ) ? process_frame : yframe_print;
 	ctx->process_extra_arg = process_extra_arg;
+
+	ctx->free = yframe_ctx_free;
+	ctx->receive = yframe_receive;
 	
 	return ctx;
 }
@@ -75,7 +72,8 @@ void yframe_ctx_free( yframe_ctx_t* ctx)
 	
 	if ( ctx->frame_buffer != NULL )
 	{
-		free( ctx->frame_buffer);
+		utstring_free( ctx->frame_buffer);
+		ctx->frame_buffer = NULL;
 	}
 	
 	free( ctx);
@@ -145,12 +143,12 @@ void yframe_encode( const void* src, size_t n, void **out, size_t *out_size)
 	*res++ = YFRAME_END;
 }
 
-void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
+void yframe_receive( yframe_ctx_t *ctx, void *buf, size_t n)
 {
-	if ( ctx == NULL || _in == NULL )
+	if ( ctx == NULL || buf == NULL )
 		return;
 
-	unsigned char *in = (unsigned char *)_in;
+	unsigned char *in = (unsigned char *)buf;
 	unsigned char c;
 	
 	while ( n-- > 0 )
@@ -167,18 +165,17 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 		case READING:
 			if ( c == YFRAME_END )
 			{
-				// TODO: if ( is_valid_checksum( ctx->frame_buffer, ctx->cur_buf_size) )
 				if ( true )
 				{
 					yframe_cb_args_t args;
-					args.buf = ctx->frame_buffer;
-					args.n = ctx->cur_buf_size;
+					args.buf = utstring_body( ctx->frame_buffer);
+					args.n = utstring_len( ctx->frame_buffer);
 					args.extra_arg = ctx->process_extra_arg;
 					(*ctx->process_frame)( &args);
 				}
 				
 				ctx->state = UNSYNCED;
-				ctx->cur_buf_size = 0;
+				utstring_clear( ctx->frame_buffer);
 				break;
 			}
 
@@ -188,28 +185,30 @@ void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n)
 				break;
 			}
 
-			if ( ctx->cur_buf_size >= ctx->mtu )
+			if ( utstring_len( ctx->frame_buffer) >= ctx->mtu )
 			{
 				ctx->state = UNSYNCED;
-				ctx->cur_buf_size = 0;
+				utstring_clear( ctx->frame_buffer);
 			}
 
-			ctx->frame_buffer[ctx->cur_buf_size++] = c;
+			utstring_bincpy( ctx->frame_buffer, &c, 1);
 			break;
 			
 		case UNESC_NEXT:
-			ctx->frame_buffer[ctx->cur_buf_size++] = c - YFRAME_OFFSET;
-			if ( ctx->cur_buf_size >= ctx->mtu )
+			if ( utstring_len( ctx->frame_buffer) >= ctx->mtu )
 			{
 				ctx->state = UNSYNCED;
-				ctx->cur_buf_size = 0;
+				utstring_clear( ctx->frame_buffer);
 			}
+
+			c -= YFRAME_OFFSET;
+			utstring_bincpy( ctx->frame_buffer, &c, 1);
 			ctx->state = READING;
 			break;
 		
 		default:
 			ctx->state = UNSYNCED;
-			ctx->cur_buf_size = 0;
+			utstring_clear( ctx->frame_buffer);
 		}
 	}
 }
