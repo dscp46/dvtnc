@@ -52,7 +52,7 @@ Raw AX.25 frame with CRC:
 `8c 68 90 9e 8c 40 e0 8c 62 b4 b2 82 40 75 10 f0 8e fd 6e 1b bd 85 61 49`
 
 Encoded AX.25 frame:
-`e1 8c 68 90 9e 8c 40 3d 20 8c 62 b4 b2 82 40 75 10 f0 8e 3d 3d 6e 1b bd 85 61 49 e0`
+`e1 8c 68 90 9e 8c 40 3d 21 8c 62 b4 b2 82 40 75 10 f0 8e 3d 3e 6e 1b bd 85 61 49 e0`
 
 ### Frame 2
 Raw AX.25 frame:
@@ -62,4 +62,4 @@ Raw AX.25 frame with FCS:
 `8c 68 90 9e 8c 40 f8 8c 68 90 9e 8c 40 61 62 f0 5b 52 4d 53 20 45 78 70 72 65 73 73 2d 31 2e 37 2e 32 31 2e 30 2d 42 32 46 48 4d 24 5d 0d 0a dc e2 cf 8f`
 
 Encoded AX.25 frame:
-`e1 8c 68 90 9e 8c 40 f8 8c 68 90 9e 8c 40 61 62 f0 5b 52 4d 53 20 45 78 70 72 65 73 73 2d 31 2e 37 2e 32 31 2e 30 2d 42 32 46 48 4d 3d 64 5d 0d 0a dc e2 cf 8f e0`
+`e1 8c 68 90 9e 8c 40 f8 8c 68 90 9e 8c 40 61 62 f0 5b 52 4d 53 20 45 78 70 72 65 73 73 2d 31 2e 37 2e 32 31 2e 30 2d 42 32 46 48 4d 3d 65 5d 0d 0a dc e2 cf 8f e0`
