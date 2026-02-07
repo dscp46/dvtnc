@@ -25,4 +25,4 @@ On the Icom side, I've noted 2 interface models to access the data channel:
 TODO: dig in Kenwood specs
 
 ## Data transmission format
-The data transmission format is defined in [the Specification][doc/Specification.md] attached to this repository.
+The data transmission format is defined in [the Specification](doc/Specification.md) attached to this repository.
