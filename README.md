@@ -1,7 +1,7 @@
 # D-Star DV TNC
 
 > [!WARNING]
-> The current code is a quick and dirty PoC. **In its current form, it DOES NOT comply with the specification.**
+> The current code is a quick and dirty PoC.
 > Please check later if you're looking for something stable.
 
 That project aims to build a KISS software TNC to bridge AX.25 packet applications though D-Star DV slow and fast data.
