@@ -19,23 +19,16 @@ void test_yframe_is_banned_char() {
     assert(yframe_is_banned_char(0x50) == false);
 }
 
-void test_yframe_encoded_size() {
-    unsigned char data[] = {0x01, 0xE1, 0x50};
-    size_t size = yframe_encoded_size(data, sizeof(data));
-    assert(size == 6);  // Start + encoded bytes + end
-}
-
 void test_yframe_encode() {
     unsigned char data[] = {0x01, 0xE1, 0x50};
-    void *encoded = NULL;
-    size_t encoded_size = 0;
-    
-    yframe_encode(data, sizeof(data), &encoded, &encoded_size);
+    UT_string *encoded = NULL;
+    utstring_new(encoded);
 
-    assert(encoded != NULL);
-    assert(encoded_size == 6);
+    yframe_encode(data, sizeof(data), encoded);
+
+    assert(utstring_len(encoded) == 6);
     
-    unsigned char *enc = (unsigned char *)encoded;
+    unsigned char *enc = (unsigned char *)utstring_body(encoded);
     assert(enc[0] == 0xE1); // Start byte
     assert(enc[1] == 0x01);
     assert(enc[2] == 0x3D); // Escape character
@@ -43,7 +36,7 @@ void test_yframe_encode() {
     assert(enc[4] == 0x50);
     assert(enc[5] == 0xE0); // End byte
     
-    free(encoded);
+    utstring_free(encoded);
 }
 
 void test_received_frame( void *args)
@@ -65,7 +58,6 @@ void test_yframe_receive() {
 int main() {
     test_yframe_ctx_create_and_free();
     test_yframe_is_banned_char();
-    test_yframe_encoded_size();
     test_yframe_encode();
     test_yframe_receive();
     printf("All tests passed!\n");

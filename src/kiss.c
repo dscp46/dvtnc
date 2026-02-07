@@ -3,11 +3,13 @@
 #include "yframe.h"
 
 #include <arpa/inet.h>
+#include <endian.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zlib.h>
 
 #define BUFFER_SIZE 1460
 
@@ -21,28 +23,55 @@ typedef struct kiss_srv_args_t {
 
 void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 {
-	unsigned char *ptr = (unsigned char*)buffer;
-	size_t i = n-1;
+	unsigned char *ptr = (unsigned char*)buffer, *frame = NULL;
+	size_t i = n-1, frame_len;
 	
+	//uint16_t acknum;
 	uint8_t type = (uint8_t) *ptr++;
-	
+	uint32_t fcs;
+
 	switch( type & 0x0F )
 	{
+	case 0x0C:
+		printf( "[ACKMODE] ");
+		//acknum = ntohs( *ptr);
+		frame = ptr + 2;
+		i -= 2;
+		// TODO: add send queue tracking to send ACK once the packet has been aired
+		// fall through
+
 	case 0x00:
+		frame_len = i;
+		if( frame == NULL )
+			frame = ptr;
+
 		printf("New data frame: ");
 		while ( i-- > 0 )
 			printf( "%02X ", *ptr++);
 		printf("\n");
 		
-		// TODO: Encapsulate in a YFRAME
-		void *encoded = NULL;
-    	size_t encoded_size = 0;
-    
-    	yframe_encode(buffer, n, &encoded, &encoded_size);
-		serial_send( settings->serial, encoded, encoded_size);
+		UT_string *raw = NULL, *encoded = NULL;
+		utstring_new( raw);
+
+		// TODO: Decode KISS frame
+		//kiss_decode( frame, frame_len, raw);
+
+		// Compute and store checksum
+		fcs = crc32(  0L, Z_NULL, 0);
+		fcs = crc32( fcs, frame, frame_len);
+		fcs = htole32( fcs);
+		utstring_bincpy( raw, frame, 4);
+
+		// Encapsulate in a YFRAME
+		utstring_new( encoded);
+		// yframe_encode( utstring_body( raw), utstring_len( raw), encoded); // TODO
+		yframe_encode( frame, frame_len, encoded);
+		utstring_free( raw);
+
+		// Send packet
+		serial_send( settings->serial, utstring_body( encoded), utstring_len( encoded));
 		
-		if ( encoded != NULL )
-			free( encoded);
+		utstring_free( encoded);
 
 		break;
 		
@@ -88,7 +117,7 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 		printf("\n");
 		break;
 		
-	case 0x0C:
+	case 0x0E:
 		printf( "Received an IPOLL command");
 		break;
 		

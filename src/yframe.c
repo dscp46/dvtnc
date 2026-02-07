@@ -90,57 +90,35 @@ bool yframe_is_banned_char( unsigned char c)
 	return ( BANNED_CHARMAP[ c/8 ] & (1 << ( c%8 )) ) != 0;
 }
 
-size_t yframe_encoded_size( const void* buf, size_t n)
-{
-	size_t outsize = 2; /* FIXME: 4 once we've inserted the frame checksum */
-	if ( buf == NULL )
-		return 0;
-	
-	unsigned char *buff = (unsigned char*) buf;
-	while ( n-- > 0 )
-	{
-		// Extra incrementation for banned chars
-		if ( yframe_is_banned_char( *buff++) )
-			++outsize;
-		
-		++outsize;
-	}
-	return outsize;
-}
-
 // Allocate a buffer and encode the frame.
-// The end user is responsible for freeing the out buffer. 
-void yframe_encode( const void* src, size_t n, void **out, size_t *out_size)
+void yframe_encode( const void* src, size_t n, UT_string *out)
 {
-	*out_size = yframe_encoded_size( src, n);
-	if ( *out_size == 0 )
+	if( src == NULL	|| out == NULL )
 		return;
-	
-	*out = malloc( *out_size);
-	if ( *out == NULL )
-	{
-		*out_size = 0;
-		return;
-	}
-	
+
 	const unsigned char *in = (const unsigned char *) src;
-	unsigned char *res = (unsigned char *) *out;
-	//int16_t	c;
-	
-	*res++ = YFRAME_START;
-	
+	unsigned char c[2];
+
+	c[0] = YFRAME_START;
+	utstring_bincpy( out, &c, 1);
+
 	while ( n-- > 0 )
 	{
 		if( yframe_is_banned_char( *in) )
 		{
-			*res++ = YFRAME_ESC;
-			*res++ = YFRAME_OFFSET + *in++;
+			c[0] = YFRAME_ESC;
+			c[1] = YFRAME_OFFSET + *in++;
+			utstring_bincpy( out, &c, 2);
 		}
 		else
-			*res++ = *in++;
+		{
+			c[0] = *in++;
+			utstring_bincpy( out, &c, 1);
+		}
 	}
 	
-	*res++ = YFRAME_END;
+	c[0] = YFRAME_END;
+	utstring_bincpy( out, &c, 1);
 }
 
 void yframe_receive( yframe_ctx_t *ctx, void *buf, size_t n)

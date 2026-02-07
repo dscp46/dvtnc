@@ -43,12 +43,11 @@ typedef struct yframe_ctx {
 } yframe_ctx_t;
 
 yframe_ctx_t* yframe_ctx_create( size_t mtu, yframe_rx_callback process_frame, void *process_extra_arg);
-void yframe_encode( const void* buf, size_t n, void **out, size_t *out_size);
+void yframe_encode( const void* src, size_t n, UT_string *out);
 
 #ifdef YFRAME_INTERNALS
 void yframe_ctx_free( yframe_ctx_t* ctx);
 bool yframe_is_banned_char( unsigned char c);
-size_t yframe_encoded_size( const void* buf, size_t n);
 void yframe_receive( yframe_ctx_t *ctx, void *_in, size_t n);
 #endif
 
