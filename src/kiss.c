@@ -123,7 +123,7 @@ void kiss_encode( UT_string *buf, UT_string *out, unsigned char cmd)
 void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 {
 	unsigned char *ptr = (unsigned char*)buffer, *frame = NULL;
-	size_t i = n, frame_len;
+	size_t i = n-1, frame_len;
 	UT_string *raw = NULL, *encoded = NULL;
 	utstring_new( raw);
 	utstring_new( encoded);
@@ -263,7 +263,6 @@ void *kiss_handle_client( void *arg)
 
 void kiss_dispatch_processed_frame( void *arg)
 {
-	
 	yframe_cb_args_t *args = (yframe_cb_args_t *)arg;
 	app_settings_t *settings = (app_settings_t*)args->extra_arg;
 	unsigned char* data = (unsigned char*)args->buf;
@@ -272,7 +271,7 @@ void kiss_dispatch_processed_frame( void *arg)
 	UT_string *raw = NULL, *encoded = NULL;
 
 	// Runt frames are less than the short AX.25 frame and its FCS
-	if( len < 20 )
+	if( len < 19 )
 	{
 		// TODO: Runt frame processing
 		fprintf( stderr, "< Runt framed received.\n");

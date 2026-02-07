@@ -9,7 +9,7 @@
 #define YFRAME_START	0xE1
 #define YFRAME_END	0xE0
 #define YFRAME_ESC	0x3D
-#define YFRAME_OFFSET	32
+#define YFRAME_OFFSET	65
 
 static uint8_t BANNED_CHARMAP[32] = {0};
 static bool charmap_inited = false;
