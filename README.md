@@ -8,21 +8,26 @@ On the great scheme of things, the idea is to communicate with a [digital Servic
 
 ## Radio support
 What we need:
-  * On launch, collect existing settings and save them [P1]
-  * On termination, restore prior settings [P1]
-  * Auto-detect radio type, then set our own settings auto-magically. [P1]
-  * Buffer management, proper channel flow control [P2]
-  * Auto QSY to the appropriate channel [P3]
-  * DV fast data auto upgrade [P4]
-  * CI-V commands bridging through SetHardware commands [P5]
-  * AGWPE compatibility [P6]
-  * AX.25 Header compression (Similar to RFC2508) [P7]
+  * [ ] On launch, collect existing settings and save them [P1]
+  * [ ] On termination, restore prior settings [P1]
+  * [ ] Buffer management, proper channel flow control [P1]
+  * [ ] Auto-detect radio type, then set our own settings auto-magically. [P2]
+  * [ ] DV fast data auto upgrade [P3]
+  * [ ] Auto QSY to the appropriate channel [P4]
+  * [ ] CI-V commands bridging through SetHardware commands [P5]
+  * [ ] AGWPE compatibility [P6]
 
-On the Icom side, I've noted 2 interface models to access the data channel:
-  * CI-V Transceive commands (ID-51s work like this)
-  * CI-V plus dedicated communication channel.
+### Icom Radios
+On the Icom side, I've noted 3 possible interface models to access the data channel:
+  * Hybrid data / CI-V port (ID-51s work like this), discrimination between the two modes is done through a different serial line speed.
+  * CI-V Data Transceive commands (through the `22 00` commands). Some additional work needed to understand how back pressure is applicable.  
+  * CI-V plus dedicated communication channel (IC-705, IC-7100).
 
-TODO: dig in Kenwood specs
+### Kenwood
+I've only dug in the TH-D74A/E documentation, Kenwood proposes DV Fast data communication, further tests needed.
+We could reuse the dedicated communication channel model.
+
+For now, I need to check how the usb port exposes the interface (one or two virtual serial ports?).
 
 ## Data transmission format
 The data transmission format is defined in [the Specification](doc/Specification.md) attached to this repository.
