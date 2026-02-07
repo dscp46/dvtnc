@@ -1,11 +1,14 @@
 # D-Star DV TNC
 
 > [!WARNING]
-> The current code is a quick and dirty PoC. In its current form, it DOES NOT comply with the specification.
+> The current code is a quick and dirty PoC. **In its current form, it DOES NOT comply with the specification.**
 > Please check later if you're looking for something stable.
 
 That project aims to build a KISS software TNC to bridge AX.25 packet applications though D-Star DV slow and fast data.
-On the great scheme of things, the idea is to communicate with a [digital Service Gateway](https://github.com/dscp46/dsgw/).
+In the great scheme of things, the idea is to communicate with a [Digital Packet Service Gateway](https://github.com/dscp46/dsgw/).
+
+## Data transmission format
+The data transmission format is defined in [the Specification](doc/Specification.md) attached to this repository.
 
 ## Radio support
 What we need:
@@ -30,5 +33,3 @@ We could reuse the dedicated communication channel model.
 
 For now, I need to check how the usb port exposes the interface (one or two virtual serial ports?).
 
-## Data transmission format
-The data transmission format is defined in [the Specification](doc/Specification.md) attached to this repository.
