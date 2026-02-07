@@ -123,7 +123,7 @@ void kiss_encode( UT_string *buf, UT_string *out, unsigned char cmd)
 void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 {
 	unsigned char *ptr = (unsigned char*)buffer, *frame = NULL;
-	size_t i = n-1, frame_len;
+	size_t i = n, frame_len;
 	UT_string *raw = NULL, *encoded = NULL;
 	utstring_new( raw);
 	utstring_new( encoded);
@@ -253,7 +253,7 @@ void *kiss_handle_client( void *arg)
         if( buffer[0] == 0xC0 && buffer[bytes_read-1] == 0xC0 )
         	kiss_process_frame( buffer+1, bytes_read-2, settings);
         else
-        	printf(" Non-KISS frame received and discarded.");
+		printf("< Non-KISS frame received and discarded.");
     }
 
     printf("Client disconnected.\n");
@@ -275,6 +275,7 @@ void kiss_dispatch_processed_frame( void *arg)
 	if( len < 20 )
 	{
 		// TODO: Runt frame processing
+		fprintf( stderr, "< Runt framed received.\n");
 		return;
 	}
 
@@ -300,7 +301,7 @@ void kiss_dispatch_processed_frame( void *arg)
 	}
 	else
 	{
-		fprintf( stderr, "Received corrupted frame (FCS: %08x, expected %08x).\n", fcs, rx_fcs);
+		fprintf( stderr, "< Received corrupted frame (FCS: %08x, expected %08x).\n", fcs, rx_fcs);
 	}
 }
 
