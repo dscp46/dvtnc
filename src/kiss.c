@@ -267,26 +267,40 @@ void kiss_dispatch_processed_frame( void *arg)
 	yframe_cb_args_t *args = (yframe_cb_args_t *)arg;
 	app_settings_t *settings = (app_settings_t*)args->extra_arg;
 	unsigned char* data = (unsigned char*)args->buf;
-	
-	switch( data[0] )
+	size_t len = args->n;
+	uint32_t fcs, rx_fcs;
+	UT_string *raw = NULL, *encoded = NULL;
+
+	// Runt frames are less than the short AX.25 frame and its FCS
+	if( len < 20 )
 	{
-	case 0x00:
-		// Data frame.
+		// TODO: Runt frame processing
+		return;
+	}
+
+	memcpy( &rx_fcs, data+(len-4), 4);
+	rx_fcs = le32toh( rx_fcs);
+
+	fcs = crc32(  0L, Z_NULL, 0);
+	fcs = crc32( fcs, data, len-4);
+
+	if( fcs == rx_fcs )
+	{
+		utstring_new( raw);
+		utstring_new( encoded);
+
+		utstring_bincpy( raw, data, len-4);
+		kiss_encode( raw, encoded, KISS_DATA);
+
 		// FIXME: Pass down the frame to the AX.25 DSE layer for switching
-		unsigned char *frame = malloc( args->n+2);
-		if ( frame == NULL )
-		{
-			fprintf( stderr, "kiss_displatch_processed_frame: memory alloc failed.\n");
-			break;
-		}
-		frame[0] = 0xC0;
-		frame[args->n+1] = 0xC0;
-		memcpy( frame+1, data, args->n);
-		send( settings->client_fd, frame, args->n+2, 0);
-		free( frame);	
-		break;
-	default:
-		fprintf( stderr, "Received a data frame with unknown type: %x", data[0]);
+		send( settings->client_fd, utstring_body( encoded), utstring_len( encoded), 0);
+
+		utstring_free( raw);
+		utstring_free( encoded);
+	}
+	else
+	{
+		fprintf( stderr, "Received corrupted frame (FCS: %08x, expected %08x).\n", fcs, rx_fcs);
 	}
 }
 
