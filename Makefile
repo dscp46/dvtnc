@@ -2,20 +2,21 @@ CC=gcc
 CCFLAGS=-Wall -Wextra -fPIE -pie -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -Wformat -Wformat=2 -Wimplicit-fallthrough -fstack-clash-protection -fstack-protector-strong 
 BUILDDIR=./build
 SRCDIR=./src
-LIBS=-lpthread
+LIBS=-lpthread -lz
 objects=$(addprefix $(BUILDDIR)/, main.o app.o dse.o kiss.o ringbuffer.o serial.o yframe.o iface/kiss.o)
 
+dvtnc: $(objects)
+	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
+
+.PHONY: dirs
 dirs:
-	mkdir -p $(BUILDDIR)/iface
+	test -d $(BUILDDIR)/iface || mkdir -p $(BUILDDIR)/iface
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c | dirs
 	$(CC) -c -o $@ $< $(CCFLAGS)
 
 $(BUILDDIR)/iface/%.o: $(SRCDIR)/iface/%.c | dirs
 	$(CC) -c -o $@ $< $(CCFLAGS)
-
-dvtnc: $(objects)
-	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
 
 test_rbuffer: $(addprefix $(BUILDDIR)/, test_rbuffer.o ringbuffer.o)
 	$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
@@ -30,7 +31,6 @@ test_kiss: $(addprefix $(BUILDDIR)/, test_kiss.o iface/kiss.o)
 all: dvtnc
 
 .PHONY: clean
-
 clean: 
 	find $(BUILDDIR) -name '*.o' -delete
 	rm -f dvtnc test_rbuffer test_yframe test_kiss
