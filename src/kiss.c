@@ -65,17 +65,20 @@ void kiss_decode( UT_string *buf, UT_string *out)
 			break; // continue in while
 
 		case KISS_FESC:
-			break; // continue in while
+			in++; len--;
+			switch( *in)
+			{
+			case KISS_TFEND:
+				c = KISS_FEND;
+				break;
 
-		case KISS_TFEND:
-			++in;
-			c = KISS_FEND;
-			utstring_bincpy( out, &c, 1);
-			break; // continue in while
+			case KISS_TFESC:
+				c = KISS_FESC;
+				break;
 
-		case KISS_TFESC:
-			++in;
-			c = KISS_FESC;
+			default:
+				fprintf( stderr, "%s, Unexpected escape value.\n", __FUNCTION__);
+			}
 			utstring_bincpy( out, &c, 1);
 			break; // continue in while
 
