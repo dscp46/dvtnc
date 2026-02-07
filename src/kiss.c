@@ -93,10 +93,11 @@ void kiss_encode( UT_string *buf, UT_string *out, unsigned char cmd)
 	unsigned char c[2], *in = (unsigned char*) utstring_body( buf);
 	size_t len = utstring_len( buf);
 
-	c[0] = KISS_FESC;
+	c[0] = KISS_FEND;
 	c[1] = cmd;
 	utstring_bincpy( out, &c, 2);
 
+	c[0] = KISS_FESC;
 	while( len-- > 0 )
 	{
 		switch( *in)
@@ -117,6 +118,7 @@ void kiss_encode( UT_string *buf, UT_string *out, unsigned char cmd)
 		in++;
 	}
 
+	c[0] = KISS_FEND;
 	utstring_bincpy( out, &c, 1); // Trailing FEND
 }
 
