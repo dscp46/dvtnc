@@ -166,7 +166,7 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 
 		// Compute and store checksum
 		fcs = crc32(  0L, Z_NULL, 0);
-		fcs = crc32( fcs, utstring_body( raw), utstring_len( raw));
+		fcs = crc32( fcs, (unsigned char*)utstring_body( raw), utstring_len( raw));
 		fcs = htole32( fcs);
 		utstring_bincpy( raw, &fcs, 4);
 
