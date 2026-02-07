@@ -16,15 +16,117 @@
 // AX.25 frame: 1024b, Start & End markers: 2b, CRC32: 4b, Type: 1b 
 #define RX_MTU 1031
 
+#define KISS_FEND	0xC0
+#define KISS_FESC	0xDB
+#define KISS_TFEND	0xDC
+#define KISS_TFESC	0xDD
+
+#define KISS_MASK_CMD	0x0F
+#define KISS_MASK_ADDR	0xF0
+
+#define KISS_DATA	0x00
+#define KISS_SET_TXDLY	0x01
+#define KISS_SET_P	0x02
+#define KISS_SET_SLOTTM	0x03
+#define KISS_SET_TXTAIL	0x04
+#define KISS_SET_FDX	0x05
+#define KISS_CMD_SETHW	0x06
+#define KISS_ACKMODE	0x0C
+#define KISS_IPOLL	0x0E
+
 typedef struct kiss_srv_args_t {
 	app_settings_t *settings;
 	int client_fd;
 } kiss_srv_args_t;
 
+// Decode a KISS payload
+void kiss_decode( UT_string *buf, UT_string *out)
+{
+	if( buf == NULL || out == NULL ) return;
+	unsigned char c, found_cmd=0, *in = (unsigned char*) utstring_body( buf);
+	size_t len = utstring_len( buf);
+
+	while( len-- > 0 )
+	{
+		if( found_cmd )
+		{
+			utstring_bincpy( out, in++, 1);
+			found_cmd = 0;
+			continue;
+		}
+
+		switch( *in)
+		{
+		case KISS_FEND:
+			// Ignore FEND if string is empty
+			if( utstring_len(out) != 0 )
+				return;
+			found_cmd = 1;
+			break; // continue in while
+
+		case KISS_FESC:
+			break; // continue in while
+
+		case KISS_TFEND:
+			++in;
+			c = KISS_FEND;
+			utstring_bincpy( out, &c, 1);
+			break; // continue in while
+
+		case KISS_TFESC:
+			++in;
+			c = KISS_FESC;
+			utstring_bincpy( out, &c, 1);
+			break; // continue in while
+
+		default:
+			utstring_bincpy( out, in, 1);
+		}
+		++in;
+	}
+}
+
+// Encode a raw frame in KISS format.
+void kiss_encode( UT_string *buf, UT_string *out, unsigned char cmd)
+{
+	if( buf == NULL || out == NULL ) return;
+	unsigned char c[2], *in = (unsigned char*) utstring_body( buf);
+	size_t len = utstring_len( buf);
+
+	c[0] = KISS_FESC;
+	c[1] = cmd;
+	utstring_bincpy( out, &c, 2);
+
+	while( len-- > 0 )
+	{
+		switch( *in)
+		{
+		case KISS_FEND:
+			c[1] = KISS_TFEND;
+			utstring_bincpy( out, &c, 2);
+			break;
+
+		case KISS_FESC:
+			c[1] = KISS_TFESC;
+			utstring_bincpy( out, &c, 2);
+			break;
+
+		default:
+			utstring_bincpy( out, in, 1);
+		}
+		in++;
+	}
+
+	utstring_bincpy( out, &c, 1); // Trailing FEND
+}
+
 void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 {
 	unsigned char *ptr = (unsigned char*)buffer, *frame = NULL;
 	size_t i = n-1, frame_len;
+	UT_string *raw = NULL, *encoded = NULL;
+	utstring_new( raw);
+	utstring_new( encoded);
 	
 	//uint16_t acknum;
 	uint8_t type = (uint8_t) *ptr++;
@@ -32,7 +134,7 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 
 	switch( type & 0x0F )
 	{
-	case 0x0C:
+	case KISS_ACKMODE:
 		printf( "[ACKMODE] ");
 		//acknum = ntohs( *ptr);
 		frame = ptr + 2;
@@ -40,7 +142,7 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 		// TODO: add send queue tracking to send ACK once the packet has been aired
 		// fall through
 
-	case 0x00:
+	case KISS_DATA:
 		frame_len = i;
 		if( frame == NULL )
 			frame = ptr;
@@ -49,82 +151,87 @@ void kiss_process_frame( void* buffer, size_t n, app_settings_t *settings)
 		while ( i-- > 0 )
 			printf( "%02X ", *ptr++);
 		printf("\n");
-		
-		UT_string *raw = NULL, *encoded = NULL;
-		utstring_new( raw);
 
-		// TODO: Decode KISS frame
-		//kiss_decode( frame, frame_len, raw);
+		// Decode KISS payload
+		utstring_bincpy( encoded, frame, frame_len);
+		kiss_decode( encoded, raw);
+
+		// Clear the buffer for later use (encoded YFrame)
+		utstring_clear( encoded);
 
 		// Compute and store checksum
 		fcs = crc32(  0L, Z_NULL, 0);
 		fcs = crc32( fcs, frame, frame_len);
 		fcs = htole32( fcs);
-		utstring_bincpy( raw, frame, 4);
+		utstring_bincpy( raw, &fcs, 4);
 
 		// Encapsulate in a YFRAME
-		utstring_new( encoded);
-		// yframe_encode( utstring_body( raw), utstring_len( raw), encoded); // TODO
-		yframe_encode( frame, frame_len, encoded);
-		utstring_free( raw);
+		yframe_encode( utstring_body( raw), utstring_len( raw), encoded);
 
 		// Send packet
 		serial_send( settings->serial, utstring_body( encoded), utstring_len( encoded));
-		
-		utstring_free( encoded);
-
 		break;
-		
-	case 0x01:
+
+	case KISS_SET_TXDLY:
 		if( n == 2 )
 			printf( "Set Tx Delay: %d ms.\n", 10*(uint8_t)*ptr);
 		else
 			printf( "Invalid command.");
 		break;
-	
-	case 0x02:
+
+	case KISS_SET_P:
 		if( n == 2 )
 			printf( "Set Persistence: %d.\n", *ptr);
 		else
 			printf( "Invalid command.");
 		break;
-	
-	case 0x03:
+
+	case KISS_SET_SLOTTM:
 		if( n == 2 )
 			printf( "Set Slot time: %d ms.\n", 10*(uint8_t)*ptr);
 		else
 			printf( "Invalid command.");
 		break;
 
-	case 0x04:
+	case KISS_SET_TXTAIL:
 		if( n == 2 )
 			printf( "Set Tx tail: %d ms.\n", 10*(uint8_t)*ptr);
 		else
 			printf( "Invalid command.\n");
 		break;
-	
-	case 0x05:
+
+	case KISS_SET_FDX:
 		if( n == 2 )
 			printf( "Duplex mode: %s\n", ((uint8_t)*ptr == 0) ? "Half" : "Full");
 		else
 			printf( "Invalid command.\n");
 		break;
-	
-	case 0x06:
+
+	case KISS_CMD_SETHW:
 		printf("Hardware specific command: ");
-		while ( i-- > 0 )
+
+		utstring_bincpy( encoded, ptr, i);
+		kiss_decode( encoded, raw);
+		ptr = (unsigned char *) utstring_body( raw);
+		i = utstring_len( raw);
+
+		while( i-- > 0)
 			printf( "%02X ", *ptr++);
 		printf("\n");
+
+		// TODO: Process Command
 		break;
-		
-	case 0x0E:
+
+	case KISS_IPOLL:
 		printf( "Received an IPOLL command");
 		break;
-		
+
 	default:
 		printf( "Unsupported command type");
 	}
 
+	utstring_free( raw);
+	utstring_free( encoded);
 }
 
 void *kiss_handle_client( void *arg)
